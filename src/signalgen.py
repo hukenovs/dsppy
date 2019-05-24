@@ -152,6 +152,15 @@ def am_sig(amp=1.0, km=0.3, fc=10.0, fm=5.0, period=100):
     return amp * (1 + km * np.cos(tm)) * np.cos(tc)
 
 
-def chirp_sig(amp=1.0, period=100):
-    tt = 2.0 * np.pi * vector_sig(period)
-    return amp * chirp(tt, 0.0, np.pi, period/13, 'linear')
+def chirp_sig(amp=1.0, period=100, beta=0.125, is_complex=True, is_sine=True):
+    tt = 2.0 * np.pi * (beta * period * vector_sig(period) ** 2)
+    ts = 1.0 * np.pi * vector_sig(period)
+    if is_complex is True:
+        res = amp * (np.cos(tt) + 1j*np.sin(tt))
+    else:
+        res = amp * np.cos(tt)
+
+    if is_sine is True:
+        return res * np.sin(ts)
+
+    return res

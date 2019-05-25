@@ -43,23 +43,7 @@ OR CORRECTION.
 import numpy as np
 
 
-class DataVector:
-    """
-    Return data array for time / freq domains
-
-    Parameters
-    ----------
-    nlen : integer
-        Number of points for signal
-    """
-    def __init__(self, nlen=10):
-        self.nlen = nlen
-
-    def get_vector(self):
-        return np.linspace(0.0, 1.0, self.nlen)
-
-
-class SimpleSignal:
+def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
     """
     Create simple waves: sine, cosine or complex combination
 
@@ -73,31 +57,18 @@ class SimpleSignal:
         Number of points for signal (same as period)
     mode : str
         Output mode: sine, cosine or complex signal
-
-    Methods
-    -------
-    get_data()
-        Return harmonic signal as array of floating-point data
     """
-    def __init__(self, amp=1.0, freq=10.0, period=100, mode='sin'):
-        self.amp = amp
-        self.freq = freq
-        self.period = period
-        self.mode = mode
-        self.__tt = DataVector(self.period).get_vector()
-
-    def get_data(self):
-        tt = self.freq * 2.0 * np.pi * self.__tt
-        if self.mode == 'sin':
-            return self.amp * np.sin(tt)
-        if self.mode == 'cos':
-            return self.amp * np.cos(tt)
-        if self.mode == 'cmp':
-            return self.amp * (np.sin(tt) + 1j*np.cos(tt))
-        raise ValueError('Wrond signal mode')
+    tt = freq * 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+    if mode == 'sin':
+        return amp * np.sin(tt)
+    if mode == 'cos':
+        return amp * np.cos(tt)
+    if mode == 'cmp':
+        return amp * (np.sin(tt) + 1j*np.cos(tt))
+    raise ValueError('Wrond signal mode')
 
 
-class AmSignal:
+def signal_am(amp=1.0, km=0.25, fc=10.0, fs=2.0, period=100):
     """
     Create Amplitude modulation (AM) signal
 
@@ -113,26 +84,12 @@ class AmSignal:
         Signal frequency
     period : integer
         Number of points for signal (same as period)
-
-    Methods
-    -------
-    get_data()
-        Return AM signal as array of floating-point data
     """
-    def __init__(self, amp=1.0, km=10.0, fc=10.0, fs=2.0, period=100):
-        self.amp = amp
-        self.km = km
-        self.fc = fc
-        self.fs = fs
-        self.period = period
-        self.__tt = DataVector(self.period).get_vector()
-
-    def get_data(self):
-        tt = 2.0 * np.pi * self.__tt
-        return self.amp * (1 + self.km * np.cos(self.fs * tt)) * np.cos(self.fc * tt)
+    tt = 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+    return amp * (1 + km * np.cos(fs * tt)) * np.cos(fc * tt)
 
 
-class ChirpSignal:
+def signal_chirp(amp=1.0, beta=0.25, period=100, is_complex=False, is_modsine=False):
     """
     Create Chirp signal
 
@@ -148,36 +105,23 @@ class ChirpSignal:
         Complex signal if True
     is_modsine : bool
         Modulated by half-sine wave it True
-
-    Methods
-    -------
-    get_data()
-        Return Chirp signal as array of floating-point data
     """
-    def __init__(self, amp=1.0, period=100, beta=0.125, is_complex=True, is_modsine=True):
-        self.amp = amp
-        self.period = period
-        self.beta = beta
-        self.is_complex = is_complex
-        self.is_modsine = is_modsine
-        self.__tt = DataVector(self.period).get_vector()
+    tp = np.linspace(0.0, 1.0, period)
+    tt = np.pi * (beta * period * tp ** 2)
+    ts = np.pi * tp
+    if is_complex is True:
+        res = amp * (np.cos(tt) + 1j * np.sin(tt))
+    else:
+        res = amp * np.cos(tt)
 
-    def get_data(self):
-        tt = np.pi * (self.beta * self.period * self.__tt ** 2)
-        ts = np.pi * self.__tt
-        if self.is_complex is True:
-            res = self.amp * (np.cos(tt) + 1j * np.sin(tt))
-        else:
-            res = self.amp * np.cos(tt)
-
-        if self.is_modsine is True:
-            return res * np.sin(ts)
-        return res
+    if is_modsine is True:
+        return res * np.sin(ts)
+    return res
 
 
-class GaussNoise:
+def noise_gauss(mean=0.0, std=0.5, period=100):
     """
-    Create Gaussian white noise
+    Create Gaussian white noise as array of floating-point data
 
     Parameters
     ----------
@@ -187,16 +131,5 @@ class GaussNoise:
         Standard deviation
     period : integer
         Number of points for noise (same as signal period)
-
-    Methods
-    -------
-    get_noise()
-        Return white noise as array of floating-point data
     """
-    def __init__(self, mean=0.0, std=0.5, period=100):
-        self.mean = mean
-        self.std = std
-        self.period = period
-
-    def get_noise(self):
-        return np.random.normal(self.mean, self.std, self.period)
+    return np.random.normal(mean, std, np.linspace(0.0, 1.0, period))

@@ -8,13 +8,10 @@ Lang.         : python
 Company       :
 Release Date  : 2019/05/24
 
-
 ------------------------------------------------------------------------
 
-Description :
-   Signal generator for digital signal processing
-
-
+Description   :
+    Signal generator for digital signal processing
 
 ------------------------------------------------------------------------
 
@@ -54,7 +51,6 @@ class DataVector:
     ----------
     nlen : integer
         Number of points for signal
-
     """
     def __init__(self, nlen=10):
         self.nlen = nlen
@@ -82,7 +78,6 @@ class SimpleSignal:
     -------
     get_data()
         Return harmonic signal as array of floating-point data
-
     """
     def __init__(self, amp=1.0, freq=10.0, period=100, mode='sin'):
         self.amp = amp
@@ -123,7 +118,6 @@ class AmSignal:
     -------
     get_data()
         Return AM signal as array of floating-point data
-
     """
     def __init__(self, amp=1.0, km=10.0, fc=10.0, fs=2.0, period=100):
         self.amp = amp
@@ -149,7 +143,7 @@ class ChirpSignal:
     period : integer
         Number of points for signal (same as period)
     beta : float
-        Modulation coeff: beta < 1 for complex, beta < 0.5 for real
+        Modulation bandwidth: beta < 1 for complex, beta < 0.5 for real
     is_complex : bool
         Complex signal if True
     is_modsine : bool
@@ -159,7 +153,6 @@ class ChirpSignal:
     -------
     get_data()
         Return Chirp signal as array of floating-point data
-
     """
     def __init__(self, amp=1.0, period=100, beta=0.125, is_complex=True, is_modsine=True):
         self.amp = amp
@@ -179,7 +172,6 @@ class ChirpSignal:
 
         if self.is_modsine is True:
             return res * np.sin(ts)
-
         return res
 
 
@@ -200,7 +192,6 @@ class GaussNoise:
     -------
     get_noise()
         Return white noise as array of floating-point data
-
     """
     def __init__(self, mean=0.0, std=0.5, period=100):
         self.mean = mean

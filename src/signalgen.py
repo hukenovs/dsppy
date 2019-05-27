@@ -161,7 +161,7 @@ def signal_chirp(amp=1.0, beta=0.25, period=100, is_complex=False, is_modsine=Fa
     return res
 
 
-def noise_gauss(mean=0.0, std=0.5, period=100):
+def noise_gauss(mean=0.0, std=0.5, seed=0, period=100):
     """
     Create Gaussian white noise as array of floating-point data
 
@@ -171,10 +171,37 @@ def noise_gauss(mean=0.0, std=0.5, period=100):
         Mean value or signal magnitude offset
     std : float
         Standard deviation
+    seed : int
+        Seed used to initialize a pseudorandom number generator
     period : integer
         Number of points for noise (same as signal period)
     """
+    np.random.seed(seed=seed)
     return np.random.normal(mean, std, period)
+
+
+def calc_awgn(sig, snr=0.0, seed=1):
+    """
+    Create Gaussian white noise as array of floating-point data
+
+    Parameters
+    ----------
+    sig : float
+        Array of floating point data (real or complex signal)
+    snr : float
+        Standard deviation
+    seed : int
+        Seed used to initialize a pseudorandom number generator
+    """
+    pwr_sig = calc_power(sig=sig)
+    pwr_2db = pwr_sig / calc_idb(db=snr, is_power=True)
+    chk_cmp = any(np.iscomplex(sig))
+
+    np.random.seed(seed=seed)
+    get_wgn = np.random.randn(1, np.size(sig))[0] / 3
+    if chk_cmp is True:
+        return sig + np.sqrt(pwr_2db/2) * (get_wgn + 1j * get_wgn)
+    return sig + np.sqrt(pwr_2db) * get_wgn
 
 
 def calc_energy(sig):
@@ -250,7 +277,7 @@ def calc_rms(xx):
     Parameters
     ----------
     xx : float
-        Data sequence (real, imag or complex)
+        Data sequence (real or complex)
     """
     return np.sqrt(np.mean(np.abs(xx) ** 2)) / np.size(xx)
 
@@ -262,7 +289,7 @@ def calc_snr(xx, yy):
     Parameters
     ----------
     xx : float array
-        Input signal sequence (real or imag part)
+        Input signal sequence (real or complex)
     yy : float array
         The noise sequence
     """

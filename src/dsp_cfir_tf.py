@@ -44,9 +44,10 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
 import matplotlib.pyplot as plt
 
-from scipy.fftpack import fft
+from scipy.fftpack import fft, fftshift
 from src.signalgen import *
 
 # #####################################################################
@@ -59,35 +60,33 @@ Tsig = 1.0 / NFFT           # Time set
 # Chirp parameters
 Asig = 1.0                  # Signal magnitude
 Fsig = 20.0                 # Signal frequency
-beta = 0.2                  # Normalized magnitude for 1st sine
+beta = 0.25                 # Normalized magnitude for 1st sine
 
 # Noise parameters (Normal Gaussian distribution)
-mean = 0                    # Mean value (DC shift for signals)
+mean = 0.00                 # Mean value (DC bias for signals)
 std = 0.101                 # Standard deviation of the distribution
 
+SNR = 20
 # #####################################################################
 
-signal_chrip = ChirpSignal(amp=Asig, period=NFFT, beta=beta, is_complex=False, is_modsine=True).get_data()
-white_noise = GaussNoise(mean=mean, std=std, period=NFFT).get_noise()
+imit_data = signal_chirp(amp=Asig, period=NFFT, beta=beta, is_complex=False, is_modsine=True)
+awgn_data = noise_gauss(mean=mean, std=std, period=NFFT)
 
-signal_noise = signal_chrip + white_noise
+calc_data = calc_awgn(sig=imit_data, snr=SNR)
 
-sig_imit = (signal_noise.real, signal_noise.imag)
+fft_signal = fft(calc_data)
+fft_abssig = abs(fft_signal)
+fft_shifts = fftshift(fft_abssig)
 
-yf = fft(sig_imit)
-xf = np.linspace(0.0, 1.0/(2.0*Tsig), NFFT//2)
-
-plt.figure('This is the title')
-
+plt.figure('Pass chirp signal from filter (time / freq methods)')
 plt.subplot(2, 1, 1)
-plt.plot(sig_imit)
+plt.plot(calc_data)
 plt.title('Signal')
 plt.grid()
 plt.xlabel('time')
 plt.ylabel('Magnitude')
-
 plt.subplot(2, 1, 2)
-plt.plot(2.0/NFFT * np.abs(yf[0:NFFT//1]))
+plt.plot(fft_abssig)
 plt.title('Signal')
 plt.grid()
 plt.xlabel('time')

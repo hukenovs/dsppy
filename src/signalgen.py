@@ -13,6 +13,14 @@ Release Date  : 2019/05/24
 Description   :
     Signal generator for digital signal processing
 
+Functions :
+
+    signal_simple - sine or cosine
+    signal_am     - am modulation
+    signal_fm     - fm modulation
+    signal_chirp  - chirp modulation
+    noise_gauss   - Gauss white noise
+
 ------------------------------------------------------------------------
 
 GNU GENERAL PUBLIC LICENSE
@@ -56,15 +64,13 @@ def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
     period : integer
         Number of points for signal (same as period)
     mode : str
-        Output mode: sine, cosine or complex signal
+        Output mode: sine or cosine
     """
     tt = freq * 2.0 * np.pi * np.linspace(0.0, 1.0, period)
     if mode == 'sin':
         return amp * np.sin(tt)
     if mode == 'cos':
         return amp * np.cos(tt)
-    if mode == 'cmp':
-        return amp * (np.sin(tt) + 1j*np.cos(tt))
     raise ValueError('Wrond signal mode')
 
 
@@ -89,6 +95,27 @@ def signal_am(amp=1.0, km=0.25, fc=10.0, fs=2.0, period=100):
     return amp * (1 + km * np.cos(fs * tt)) * np.cos(fc * tt)
 
 
+def signal_fm(amp=1.0, kd=0.25, fc=10.0, fs=2.0, period=100):
+    """
+    Create Frequency modulation (FM) signal
+
+    Parameters
+    ----------
+    amp : float
+        Signal magnitude
+    kd : float
+        Frequency deviation, kd < period/4, (e.g. fc = 0, fs = 1, kd = 16)
+    fc : float
+        Carrier frequency
+    fs : float
+        Signal frequency
+    period : integer
+        Number of points for signal (same as period)
+    """
+    tt = 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+    return amp * np.cos(fc * tt + kd/fs * np.sin(fs * tt))
+
+
 def signal_chirp(amp=1.0, beta=0.25, period=100, is_complex=False, is_modsine=False):
     """
     Create Chirp signal
@@ -107,7 +134,7 @@ def signal_chirp(amp=1.0, beta=0.25, period=100, is_complex=False, is_modsine=Fa
         Modulated by half-sine wave it True
     """
     tp = np.linspace(0.0, 1.0, period)
-    tt = np.pi * (beta * period * tp ** 2)
+    tt = np.pi * beta * period * tp ** 2
     ts = np.pi * tp
     if is_complex is True:
         res = amp * (np.cos(tt) + 1j * np.sin(tt))
@@ -132,4 +159,4 @@ def noise_gauss(mean=0.0, std=0.5, period=100):
     period : integer
         Number of points for noise (same as signal period)
     """
-    return np.random.normal(mean, std, np.linspace(0.0, 1.0, period))
+    return np.random.normal(mean, std, period)

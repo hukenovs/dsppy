@@ -15,11 +15,13 @@ Description   :
 
 Functions :
 
-    signal_simple - sine or cosine
-    signal_am     - am modulation
-    signal_fm     - fm modulation
-    signal_chirp  - chirp modulation
-    noise_gauss   - Gauss white noise
+    Name:              Return:
+    signal_period    - sequence [0.0, 1.0), step = 1 / period
+    signal_simple    - sine or cosine
+    signal_am        - AM modulation
+    signal_fm        - FM modulation
+    signal_chirp     - Chirp modulation
+    noise_gauss      - Gauss white noise
 
 ------------------------------------------------------------------------
 
@@ -51,6 +53,19 @@ OR CORRECTION.
 import numpy as np
 
 
+def signal_period(period=100):
+    """
+    Create array of data sequence [0.0, 1.0), step = 1 / period
+
+    Parameters
+    ----------
+    period : integer
+        Number of points for signal (same as period)
+    """
+    tlast = (period - 1.0) / period
+    return np.linspace(0.0, tlast, int(period))
+
+
 def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
     """
     Create simple waves: sine, cosine or complex combination
@@ -66,7 +81,8 @@ def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
     mode : str
         Output mode: sine or cosine
     """
-    tt = freq * 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+
+    tt = freq * 2.0 * np.pi * signal_period(period)
     if mode == 'sin':
         return amp * np.sin(tt)
     if mode == 'cos':
@@ -91,7 +107,7 @@ def signal_am(amp=1.0, km=0.25, fc=10.0, fs=2.0, period=100):
     period : integer
         Number of points for signal (same as period)
     """
-    tt = 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+    tt = 2.0 * np.pi * signal_period(period)
     return amp * (1 + km * np.cos(fs * tt)) * np.cos(fc * tt)
 
 
@@ -112,7 +128,7 @@ def signal_fm(amp=1.0, kd=0.25, fc=10.0, fs=2.0, period=100):
     period : integer
         Number of points for signal (same as period)
     """
-    tt = 2.0 * np.pi * np.linspace(0.0, 1.0, period)
+    tt = 2.0 * np.pi * signal_period(period)
     return amp * np.cos(fc * tt + kd/fs * np.sin(fs * tt))
 
 
@@ -133,9 +149,8 @@ def signal_chirp(amp=1.0, beta=0.25, period=100, is_complex=False, is_modsine=Fa
     is_modsine : bool
         Modulated by half-sine wave it True
     """
-    tp = np.linspace(0.0, 1.0, period)
-    tt = np.pi * beta * period * tp ** 2
-    ts = np.pi * tp
+    tt = np.pi * beta * period * signal_period(period) ** 2
+    ts = np.pi * signal_period(period)
     if is_complex is True:
         res = amp * (np.cos(tt) + 1j * np.sin(tt))
     else:
@@ -160,3 +175,95 @@ def noise_gauss(mean=0.0, std=0.5, period=100):
         Number of points for noise (same as signal period)
     """
     return np.random.normal(mean, std, period)
+
+
+def calc_energy(sig):
+    """
+    Calculate Energy of signal.
+    Formula: y = sum( abs( x(i)^2 ) ), where i = 0..N-1
+
+    Parameters
+    ----------
+    sig : float
+        Array of floating point data
+
+    """
+    return np.sum(np.abs(sig ** 2))
+
+
+def calc_power(sig):
+    """
+    Calculate Power of signal.
+    Formula: y = (1/N) * sum( abs( x(i)^2 ) ), where i = 0..N-1
+
+    Parameters
+    ----------
+    sig : float
+        Array of floating point data
+
+    """
+    return (1/np.size(sig)) * np.sum(np.abs(sig ** 2))
+
+
+def calc_db(amp=10.0, is_power=False):
+    """
+    Calculate the dB (Energy or Power)
+    Enegry: y = 20 * log10(x),
+    Power:  y = 10 * log10(x).
+
+    Parameters
+    ----------
+    amp : float
+        Signal magnitude (energy or power)
+    is_power : bool
+        if True - calc as Power
+    """
+    if is_power is True:
+        return 10.0 * np.log10(amp)
+    else:
+        return 20.0 * np.log10(amp)
+
+
+def calc_idb(db=10.0, is_power=False):
+    """
+    Calculate the Energy or Power from dB value
+    Enegry: y = 10 ** (x / 20)
+    Power:  y = 10 ** (x / 10)
+
+    Parameters
+    ----------
+    db : float
+        Signal ratio (dB)
+    is_power : bool
+        if True - calc the Power magnitude
+    """
+    if is_power is True:
+        return 10.0 ** (db / 10.0)
+    else:
+        return 10.0 ** (db / 20.0)
+
+
+def calc_rms(xx):
+    """
+    Calculate root mean square (RMS) as the square root of the mean square
+
+    Parameters
+    ----------
+    xx : float
+        Data sequence (real, imag or complex)
+    """
+    return np.sqrt(np.mean(np.abs(xx) ** 2)) / np.size(xx)
+
+
+def calc_snr(xx, yy):
+    """
+    Calculate SNR (signal-noise ratio) value in dB
+
+    Parameters
+    ----------
+    xx : float array
+        Input signal sequence (real or imag part)
+    yy : float array
+        The noise sequence
+    """
+    return calc_db(calc_rms(xx) / calc_rms(yy), is_power=False)

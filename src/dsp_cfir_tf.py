@@ -44,11 +44,11 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
-
+import numpy as np
 import matplotlib.pyplot as plt
+from scipy.fftpack import fft, ifft
 
-from scipy.fftpack import fft, fftshift
-from src.signalgen import *
+from src.signalgen import signal_chirp, calc_awgn
 
 # #####################################################################
 # Input parameters
@@ -59,36 +59,76 @@ Tsig = 1.0 / NFFT           # Time set
 
 # Chirp parameters
 Asig = 1.0                  # Signal magnitude
-Fsig = 20.0                 # Signal frequency
-beta = 0.25                 # Normalized magnitude for 1st sine
+Fsig = 15.0                 # Signal frequency
+Beta = 0.50                 # Normalized magnitude for 1st sine
 
 # Noise parameters (Normal Gaussian distribution)
-mean = 0.00                 # Mean value (DC bias for signals)
-std = 0.101                 # Standard deviation of the distribution
 
 SNR = 20
 # #####################################################################
 
-imit_data = signal_chirp(amp=Asig, period=NFFT, beta=beta, is_complex=False, is_modsine=True)
-awgn_data = noise_gauss(mean=mean, std=std, period=NFFT)
-
+imit_data = signal_chirp(amp=Asig, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
 calc_data = calc_awgn(sig=imit_data, snr=SNR)
 
+sfun_data = signal_chirp(amp=Asig, freq=Fsig, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
+
 fft_signal = fft(calc_data)
-fft_abssig = abs(fft_signal)
-fft_shifts = fftshift(fft_abssig)
+fft_real = fft_signal.real / np.max(np.abs(fft_signal.real))
+fft_imag = fft_signal.imag / np.max(np.abs(fft_signal.imag))
+
+fft_abssig = np.abs(fft_signal)
+fft_logscl = 20*np.log10(fft_abssig / np.max(np.abs(fft_abssig)))
+
+fft_sfunc = fft(sfun_data)
+fft_sconj = np.conj(fft_sfunc)
+
+comp_mult = fft_signal * fft_sconj
+comp_real = comp_mult.real # / np.max(np.abs(comp_mult.real))
+comp_imag = comp_mult.imag # / np.max(np.abs(comp_mult.imag))
+
+ifft_signal = ifft(comp_mult)
+
+ifft_real = ifft_signal.real
+ifft_imag = ifft_signal.imag
+
+# plt_fonts = {
+#     'family': 'cursive',
+#     'style': 'italic',
+#     'size': 10}
+# plt.rc('font', **plt_fonts)
 
 plt.figure('Pass chirp signal from filter (time / freq methods)')
-plt.subplot(2, 1, 1)
-plt.plot(calc_data)
-plt.title('Signal')
+plt.subplot(2, 2, 1)
+plt.plot(calc_data.real)
+plt.plot(calc_data.imag)
+plt.title('Input Chirp Signal')
 plt.grid()
 plt.xlabel('time')
 plt.ylabel('Magnitude')
-plt.subplot(2, 1, 2)
-plt.plot(fft_abssig)
-plt.title('Signal')
+
+plt.subplot(2, 2, 2)
+plt.plot(fft_real)
+plt.plot(fft_imag)
+plt.title('Chirp Spectrum (I/Q)')
 plt.grid()
-plt.xlabel('time')
+plt.xlabel('freq')
 plt.ylabel('Magnitude')
+
+plt.subplot(2, 2, 3)
+plt.plot(comp_real)
+plt.plot(comp_imag)
+plt.title('Signal after complex multiplier')
+plt.grid()
+plt.xlabel('freq')
+plt.ylabel('Magnitude')
+
+plt.subplot(2, 2, 4)
+plt.plot(ifft_real)
+plt.plot(ifft_imag)
+plt.title('Output data (freq method)')
+plt.grid()
+plt.xlabel('freq')
+plt.ylabel('Magnitude')
+
+plt.tight_layout()
 plt.show()

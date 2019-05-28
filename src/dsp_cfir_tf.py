@@ -14,8 +14,25 @@ Description   :
     Test Complex filtration of signal by using two algorithms:
     time method and frequency method.
     Input sequence is a long duration chirp signal, output sequence is
-    filtered data. It is a narrow chirp pulse of greatly increased
-    amplitude.
+    filtered data. Output signal is a narrow chirp pulse of greatly
+    increased amplitude.
+
+    Parameters :
+    ----------
+    NFFT : integer
+        Number of FFT points (signal duration)
+
+    Asig : float
+        Signal magnitude (should be positive)
+    Fsig : float
+        Signal frequency (linear part of chirp)
+    Beta : float
+        Beta (bandwidth of chirp, max = 0.5)
+    Bstd : float
+        Simulate a little clipping of chirp (set it from 0.9 to 1.1)
+
+    SNR  : float
+        Signal to noise ratio [dB]
 
 ------------------------------------------------------------------------
 
@@ -44,52 +61,103 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fftpack import fft, ifft
+from scipy.fftpack import fft, ifft, fftshift
+from scipy.signal import convolve
 
-from src.signalgen import signal_chirp, calc_awgn
+from src.signalgen import signal_chirp, calc_awgn, complex_minmax
 
 # #####################################################################
 # Input parameters
 # #####################################################################
+
 # Number of sample points
-NFFT = 2**9                 # FFT points
-Tsig = 1.0 / NFFT           # Time set
+NFFT = 2**9                 # Number of FFT points (signal duration)
 
 # Chirp parameters
-Asig = 1.0                  # Signal magnitude
-Fsig = 15.0                 # Signal frequency
-Beta = 0.50                 # Normalized magnitude for 1st sine
+Asig = 1.100                # Signal magnitude
+Fsig = 32.00                # Signal frequency
+Beta = 0.250                # Beta (bandwidth of chirp, max = 0.5)
+Bstd = 1.050                # Simulate a little clipping of chirp
 
-# Noise parameters (Normal Gaussian distribution)
+# Noise parameters (AWGN)
+SNR = -10                   # SNR (Signal to noise ratio) in dB
 
-SNR = 20
+# #####################################################################
+# Function declaration
 # #####################################################################
 
-imit_data = signal_chirp(amp=Asig, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
+
+def filter_conv(xx, yy):
+    """
+    Calculate convolution of two complex signals
+
+    Parameters
+    ----------
+    xx : complex
+        1st one-dimensional input array.
+    yy : complex
+        2nd one-dimensional input array.
+
+    """
+    # Step 1: Conjugate and flip core function
+    yy_inv = np.flip(np.conj(yy))
+    # Step 2: Calculate partial convolution
+    flt_re2re = convolve(xx.real, yy_inv.real, mode='same')
+    flt_re2im = convolve(xx.real, yy_inv.imag, mode='same')
+    flt_im2re = convolve(xx.imag, yy_inv.real, mode='same')
+    flt_im2im = convolve(xx.imag, yy_inv.imag, mode='same')
+    # Step 3: Complex conv partial operations
+    flt_real = flt_re2re - flt_im2im
+    flt_imag = flt_im2re + flt_re2im
+    # Step 4: Flip and shift
+    return fftshift(np.flip(flt_real + 1j*flt_imag))
+
+
+# #####################################################################
+# Main section: Calculate
+# #####################################################################
+
+# Signal + Noise, FFT
+imit_data = signal_chirp(amp=Asig, freq=Fsig, beta=Bstd*Beta, period=NFFT, is_complex=True, is_modsine=True)
 calc_data = calc_awgn(sig=imit_data, snr=SNR)
 
-sfun_data = signal_chirp(amp=Asig, freq=Fsig, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
-
-fft_signal = fft(calc_data)
+fft_signal = fft(calc_data, NFFT)
 fft_real = fft_signal.real / np.max(np.abs(fft_signal.real))
 fft_imag = fft_signal.imag / np.max(np.abs(fft_signal.imag))
 
-fft_abssig = np.abs(fft_signal)
-fft_logscl = 20*np.log10(fft_abssig / np.max(np.abs(fft_abssig)))
+fft_abs = np.abs(fft_signal)
+fft_log = 20*np.log10(fft_abs / np.max(np.abs(fft_abs)))
 
-fft_sfunc = fft(sfun_data)
-fft_sconj = np.conj(fft_sfunc)
+# Sup. Function & Compl Mult
+sfun_data = signal_chirp(amp=Asig, freq=0, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
+fft_sfunc = np.conj(fft(sfun_data, NFFT))     # FFT and conjugate
 
-comp_mult = fft_signal * fft_sconj
-comp_real = comp_mult.real # / np.max(np.abs(comp_mult.real))
-comp_imag = comp_mult.imag # / np.max(np.abs(comp_mult.imag))
+comp_mult = fft_signal * fft_sfunc
+comp_real = comp_mult.real
+comp_imag = comp_mult.imag
 
-ifft_signal = ifft(comp_mult)
+# IFFT
+ifft_signal = np.flip(ifft(comp_mult, NFFT))
 
-ifft_real = ifft_signal.real
-ifft_imag = ifft_signal.imag
+# Time complex conv
+time_signal = filter_conv(xx=calc_data, yy=sfun_data)
+
+# Difference
+diff_signal = (ifft_signal-time_signal) / NFFT
+
+# #####################################################################
+# Plot results
+# #####################################################################
+
+# Min and Max for Y axis
+axis_inp = complex_minmax(calc_data)
+axis_cmp = complex_minmax(comp_mult)
+axis_res = complex_minmax(ifft_signal)
+axis_tms = complex_minmax(time_signal)
+axis_dff = complex_minmax(diff_signal)
 
 # plt_fonts = {
 #     'family': 'cursive',
@@ -97,38 +165,58 @@ ifft_imag = ifft_signal.imag
 #     'size': 10}
 # plt.rc('font', **plt_fonts)
 
-plt.figure('Pass chirp signal from filter (time / freq methods)')
-plt.subplot(2, 2, 1)
+plt.figure('Filter chirp signal freq method)')
+plt.subplot(3, 2, 1)
 plt.plot(calc_data.real)
 plt.plot(calc_data.imag)
-plt.title('Input Chirp Signal')
+plt.title('1. Input Chirp Signal')
 plt.grid()
+plt.axis([0, NFFT-1, axis_inp[0], axis_inp[1]])
 plt.xlabel('time')
 plt.ylabel('Magnitude')
 
-plt.subplot(2, 2, 2)
-plt.plot(fft_real)
-plt.plot(fft_imag)
-plt.title('Chirp Spectrum (I/Q)')
+plt.subplot(3, 2, 3)
+plt.plot(fft_log)
+plt.title('2. Chirp Spectrum')
 plt.grid()
+plt.axis([0, NFFT-1, -50, 0])
 plt.xlabel('freq')
 plt.ylabel('Magnitude')
 
-plt.subplot(2, 2, 3)
-plt.plot(comp_real)
-plt.plot(comp_imag)
-plt.title('Signal after complex multiplier')
+plt.subplot(3, 2, 5)
+plt.plot(comp_mult.real)
+plt.plot(comp_mult.imag)
+plt.title('3. Complex multiplier')
 plt.grid()
+plt.axis([0, NFFT-1, axis_cmp[0], axis_cmp[1]])
 plt.xlabel('freq')
 plt.ylabel('Magnitude')
 
-plt.subplot(2, 2, 4)
-plt.plot(ifft_real)
-plt.plot(ifft_imag)
-plt.title('Output data (freq method)')
+plt.subplot(3, 2, 2)
+plt.plot(ifft_signal.real)
+plt.plot(ifft_signal.imag)
+plt.title('4. Output (freq method)')
 plt.grid()
-plt.xlabel('freq')
+plt.axis([0, NFFT-1, axis_res[0], axis_res[1]])
+plt.xlabel('time')
 plt.ylabel('Magnitude')
 
+plt.subplot(3, 2, 4)
+plt.plot(time_signal.real)
+plt.plot(time_signal.imag)
+plt.title('5. Output (time method)')
+plt.grid()
+plt.axis([0, NFFT-1, axis_tms[0], axis_tms[1]])
+plt.xlabel('time')
+plt.ylabel('Magnitude')
+
+plt.subplot(3, 2, 6)
+plt.plot(np.abs(diff_signal.real))
+plt.plot(np.abs(diff_signal.imag))
+plt.title('6. Difference error')
+plt.grid()
+plt.axis([0, NFFT-1, 0, axis_dff[1]])
+plt.xlabel('time')
+plt.ylabel('Magnitude')
 plt.tight_layout()
 plt.show()

@@ -23,6 +23,17 @@ Functions :
     signal_chirp     - Chirp modulation
     noise_gauss      - Gauss white noise
 
+    calc_awgn        - return Signal + AWGN
+    calc_energy      - calculate energy of sequence
+    calc_power       - calculate power of sequence
+    calc_db          - convert from AmpLevel to [dB]
+    calc_idb         - convert from [dB]  to AmpLevel
+    calc_rms         - calculate root mean square
+    calc_snr         - calculate Signal-to-Noise Ratio
+    complex_max      - find maximum of complex value
+    complex_min      - find minimum of complex value
+    complex_minmax   - find min and max of complex value
+
 ------------------------------------------------------------------------
 
 GNU GENERAL PUBLIC LICENSE
@@ -198,7 +209,7 @@ def calc_awgn(sig, snr=0.0, seed=1):
         Seed used to initialize a pseudorandom number generator
     """
     pwr_sig = calc_power(sig=sig)
-    pwr_2db = pwr_sig / calc_idb(db=snr, is_power=True)
+    pwr_2db = pwr_sig / calc_idb(db=snr, is_power=False)
     chk_cmp = any(np.iscomplex(sig))
 
     np.random.seed(seed=seed)
@@ -298,3 +309,41 @@ def calc_snr(xx, yy):
         The noise sequence
     """
     return calc_db(calc_rms(xx) / calc_rms(yy), is_power=False)
+
+
+def complex_max(xx):
+    """
+    Calculate Max value into complex 1-D array
+
+    Parameters
+    ----------
+    xx : union
+        One-dimensional complex input array.
+    """
+    xmax = np.max(xx)
+    return np.maximum(xmax.real, xmax.imag)
+
+
+def complex_min(xx):
+    """
+    Calculate Min value into complex 1-D array
+
+    Parameters
+    ----------
+    xx : union
+        One-dimensional complex input array.
+    """
+    xmin = np.min(xx)
+    return np.minimum(xmin.real, xmin.imag)
+
+
+def complex_minmax(xx):
+    """
+    Calculate Min value into complex 1-D array
+
+    Parameters
+    ----------
+    xx : union
+        One-dimensional complex input array.
+    """
+    return [complex_min(xx), complex_max(xx)]

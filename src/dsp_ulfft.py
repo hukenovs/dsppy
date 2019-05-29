@@ -92,11 +92,11 @@ N2 = 32                     # Rows (FFT2)
 NFFT = N1 * N2              # Number of total FFT points
 
 # Signal parameters
-Fsig = 2                    # Signal frequency
+fsig = 2                    # Signal frequency
 
 imit_data = np.zeros(NFFT, dtype=np.complex)
 for i in range(NFFT):
-    if (i == Fsig) or (i == NFFT-Fsig):
+    if (i == fsig) or (i == NFFT-fsig):
         imit_data[i] = 1 + 1j
     else:
         imit_data[i] = 0

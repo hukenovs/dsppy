@@ -77,13 +77,13 @@ from src.signalgen import signal_chirp, calc_awgn, complex_minmax
 NFFT = 2**9                 # Number of FFT points (signal duration)
 
 # Chirp parameters
-Asig = 1.100                # Signal magnitude
-Fsig = 32.00                # Signal frequency
-Beta = 0.250                # Beta (bandwidth of chirp, max = 0.5)
-Bstd = 1.050                # Simulate a little clipping of chirp
+asig = 1.100                # Signal magnitude
+fsig = 32.00                # Signal frequency
+beta = 0.250                # Beta (bandwidth of chirp, max = 0.5)
+bstd = 1.050                # Simulate a little clipping of chirp
 
 # Noise parameters (AWGN)
-SNR = -10                   # SNR (Signal to noise ratio) in dB
+SNR = 6                     # SNR (Signal to noise ratio) in dB
 
 # #####################################################################
 # Function declaration
@@ -121,7 +121,9 @@ def filter_conv(xx, yy):
 # #####################################################################
 
 # Signal + Noise, FFT
-imit_data = signal_chirp(amp=Asig, freq=Fsig, beta=Bstd*Beta, period=NFFT, is_complex=True, is_modsine=True)
+imit_data = signal_chirp(amp=asig, freq=fsig, beta=bstd*beta, period=NFFT,
+                         is_complex=True, is_modsine=True)
+
 calc_data = calc_awgn(sig=imit_data, snr=SNR)
 
 fft_signal = fft(calc_data, NFFT)
@@ -132,7 +134,9 @@ fft_abs = np.abs(fft_signal)
 fft_log = 20*np.log10(fft_abs / np.max(np.abs(fft_abs)))
 
 # Sup. Function & Compl Mult
-sfun_data = signal_chirp(amp=Asig, freq=0, beta=Beta, period=NFFT, is_complex=True, is_modsine=True)
+sfun_data = signal_chirp(amp=asig, freq=0, beta=beta, period=NFFT,
+                         is_complex=True, is_modsine=True)
+
 fft_sfunc = np.conj(fft(sfun_data, NFFT))     # FFT and conjugate
 
 comp_mult = fft_signal * fft_sfunc

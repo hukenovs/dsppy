@@ -131,7 +131,8 @@ def signal_fm(amp=1.0, kd=0.25, fc=10.0, fs=2.0, period=100):
     amp : float
         Signal magnitude
     kd : float
-        Frequency deviation, kd < period/4, (e.g. fc = 0, fs = 1, kd = 16)
+        Frequency deviation, kd < period/4,
+        e.g. fc = 0, fs = 1, kd = 16
     fc : float
         Carrier frequency
     fs : float
@@ -143,7 +144,7 @@ def signal_fm(amp=1.0, kd=0.25, fc=10.0, fs=2.0, period=100):
     return amp * np.cos(fc * tt + kd/fs * np.sin(fs * tt))
 
 
-def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, is_complex=False, is_modsine=False):
+def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, **kwargs):
     """
     Create Chirp signal
 
@@ -157,15 +158,18 @@ def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, is_complex=False, is_
         Linear frequency of signal
     period : integer
         Number of points for signal (same as period)
-    is_complex : bool
-        Complex signal if True
-    is_modsine : bool
-        Modulated by half-sine wave it True
+    kwargs : bool
+        Complex signal if is_complex = True
+        Modulated by half-sine wave if is_modsine = True
     """
+    is_complex = kwargs.get('is_complex', False)
+    is_modsine = kwargs.get('is_modsine', False)
+
     tlin = freq * signal_period(period)
     tdbl = beta * period * signal_period(period) ** 2
     tt = np.pi * (tlin + tdbl)
     ts = np.pi * signal_period(period)
+
     if is_complex is True:
         res = amp * (np.cos(tt) + 1j * np.sin(tt))
     else:
@@ -262,8 +266,7 @@ def calc_db(amp=10.0, is_power=False):
     """
     if is_power is True:
         return 10.0 * np.log10(amp)
-    else:
-        return 20.0 * np.log10(amp)
+    return 20.0 * np.log10(amp)
 
 
 def calc_idb(db=10.0, is_power=False):
@@ -281,8 +284,7 @@ def calc_idb(db=10.0, is_power=False):
     """
     if is_power is True:
         return 10.0 ** (db / 10.0)
-    else:
-        return 10.0 ** (db / 20.0)
+    return 10.0 ** (db / 20.0)
 
 
 def calc_rms(xx):

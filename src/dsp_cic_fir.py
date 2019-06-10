@@ -18,20 +18,29 @@ Description   :
 
     Parameters :
     ----------
-    NFFT : integer
-        Number of FFT points (signal duration)
+    R : int
+        CIC decimation factor
+    N : int
+        Number of stages (CIC filter order)
+    M : int
+        Differential delay (for FPGAs - 1 or 2)
 
-    Asig : float
-        Signal magnitude (should be positive)
-    Fsig : float
-        Signal frequency (linear part of chirp)
-    Beta : float
-        Beta (bandwidth of chirp, max = 0.5)
-    Bstd : float
-        Simulate a little clipping of chirp (set it from 0.9 to 1.1)
+    NFIR : int
+        FIR Filter order, must be odd when Fo = 0.5
+    NWDT : int
+        Number of bits for fixed-point coeffs
+    BETA : float
+        Beta for Kaiser Window
+    Fo : float
+        Normalized Cutoff: 0.2 < Fo < 0.5
 
-    SNR  : float
-        Signal to noise ratio [dB]
+    NFFT : int
+         Number of FFT points (spectrum duration)
+
+    IS_COE : bool
+        Create Xilinx *.COE file if True
+    IS_HDR : bool
+        Create *.H file (header) if True
 
 ------------------------------------------------------------------------
 
@@ -76,16 +85,16 @@ N = 6                     # Number of stages (filter order)
 M = 1                     # Differential delay (for FPGAs - 1 or 2)
 
 # FIR paramteres:
-NFIR = 256                # Filter order, must be odd when Fo = 0.5
+NFIR = 128                # Filter order, must be odd when Fo = 0.5
 NWDT = 16                 # Number of bits for fixed-point coeffs
+BETA = 7                  # Beta for Kaiser Window
 Fo = 0.22                 # Normalized Cutoff: 0.2 < Fo < 0.5;
-BETA = 9                  # Beta for Kaiser Window (if win is enabled)
 
 # Chirp parameters
 IS_COE = True             # Create Xilinx *.COE file if True
 IS_HDR = False            # Create *.H file (header) if True
 
-NFFT = 2**12              # FFT points for Spectrum
+NFFT = 2**13              # FFT points for Spectrum
 
 # #####################################################################
 # Main section: Calculate
@@ -111,6 +120,8 @@ for i in range(NFFT):
 HCIC_DB = 20 * np.log10(HCIC)
 
 # Calculate Ideal FIF filter responce:
+# NB! You can change FIR corrector freq bandwidth. Just multiply sine
+# arguments for the next equation by 2.
 FIR_IDL = np.zeros(NFFT//2)
 for i in range(NFFT//2):
     if i < int(Fo * NFFT):
@@ -132,44 +143,71 @@ FIR_COR = signal.firwin2(numtaps=NFIR,
 FIR_COR /= np.max(FIR_COR)
 
 # Calculate freq responce for FIR filter
-FIR_FFT = 20 * np.log10(np.abs(fft(FIR_COR, int(np.ceil(NFFT/R)))))
-FIR_FFT -= np.max(FIR_FFT)
+FIR_FFT = np.abs(fft(FIR_COR, int(np.ceil(NFFT/R))))
+FIR_FFT[FIR_FFT == 0] = 1e-10
 
-FIR_REP = np.tile(FIR_FFT, R)
+FIR_DB2 = 20 * np.log10(FIR_FFT)
+FIR_DB2 -= np.max(FIR_DB2)
+
+FIR_REP = np.tile(FIR_DB2, R)
 FIR_DIF = HCIC_DB + FIR_REP
 FIR_DIF -= np.max(FIR_DIF)
 
 if IS_COE:
-
     FIX_COE = np.round(FIR_COR * ((2 ** NWDT - 1) - 1))
     with open('fir_taps.coe', 'w') as fl:
         for el in FIX_COE:
             fl.write("%s\n" % int(el))
         fl.close()
 
+# Passband irregularity: calculate mean value and freq error
+PBAND = int(np.ceil(0.9*Fr*FIR_DIF.size))
+IBAND = FIR_DIF[2:PBAND]
+IMEAN = np.mean(IBAND) * np.ones(int(NFFT/2/R))
+IBSTD = 0.5 * (np.max(IBAND) - np.min(IBAND))
+
 # #####################################################################
 # Plot results
 # #####################################################################
-# plt.figure('FIR Filter Compensator ideal response')
-# plt.subplot(2, 2, 1)
-# plt.plot(np.linspace(0, 0.5, NFFT//2), FIR_IDL)
-# plt.title('CFIR filter ideal response')
-# plt.grid()
-# plt.xlim([0, 0.5])
-#
-# plt.subplot(2, 2, 2)
-# plt.plot(np.linspace(-NFIR/2, NFIR/2, NFIR), FIR_COR)
-# plt.title('FIR filter impulse response')
-# plt.grid()
-# plt.xlim([-NFIR/2, NFIR/2])
-#
-# plt.subplot(2, 2, 3)
-# plt.plot(fhlf, HCIC_DB[0:NFFT//2])
-# plt.plot(fhlf, FIR_REP[0:NFFT//2])
-# plt.plot(fhlf, FIR_DIF[0:NFFT//2])
-# plt.title('Total filter responce (Order = %d)' % NFIR)
-# plt.grid()
-# plt.ylim([-120, 5])
-#
-# plt.tight_layout()
-# plt.show()
+plt.figure('FIR Filter Compensator ideal response')
+plt.subplot(3, 2, 1)
+plt.plot(np.linspace(0, 0.5, NFFT//2), FIR_IDL, linewidth=0.75)
+plt.title('Ideal freq response')
+plt.grid()
+plt.xlim([0, 0.5])
+
+plt.subplot(3, 2, 2)
+plt.plot(np.linspace(-NFIR/2, NFIR/2, NFIR), FIR_COR, linewidth=0.75)
+plt.title('Impulse response')
+plt.grid()
+plt.xlim([-NFIR/2, NFIR/2])
+
+plt.subplot(3, 2, 3)
+plt.plot(fhlf, HCIC_DB[0:NFFT//2], '-.', linewidth=0.90)
+plt.plot(fhlf, FIR_REP[0:NFFT//2], '--', linewidth=0.90)
+plt.plot(fhlf, FIR_DIF[0:NFFT//2], '-', linewidth=1.20)
+plt.title('CIC, FIR, SUM')
+plt.grid()
+plt.xlim([0, 0.5])
+plt.ylim([-120, 5])
+
+plt.subplot(3, 2, 4)
+plt.plot(fhlf, HCIC_DB[0:NFFT//2], '-.', linewidth=0.90)
+plt.plot(fhlf, FIR_REP[0:NFFT//2], '--', linewidth=0.90)
+plt.plot(fhlf, FIR_DIF[0:NFFT//2], '-', linewidth=1.20)
+plt.title('FIR order = %d' % NFIR)
+plt.grid()
+plt.xlim([0, 0.5/R])
+plt.ylim([-120, 5])
+
+plt.subplot(3, 2, 5)
+plt.plot(fhlf, FIR_DIF[0:NFFT//2], '--', linewidth=0.75)
+plt.plot(IMEAN, '-', linewidth=1.00, label="Mean = %0.4f \nError = %0.4f" % (IMEAN[0], IBSTD))
+plt.title('Passband irregularity')
+plt.grid()
+plt.xlim([0, Fr])
+plt.ylim([np.min(IBAND), np.max(IBAND)])
+plt.legend(loc=3, ncol=1, borderaxespad=0.)
+
+plt.tight_layout()
+plt.show()

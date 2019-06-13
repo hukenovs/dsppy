@@ -197,9 +197,7 @@ def cic_calc():
     i_mean = np.mean(i_band) * np.ones(int(NFFT/2/R))
     i_stdx = 0.5 * (np.max(i_band) - np.min(i_band))
 
-    # #####################################################################
     # Plot results
-    # #####################################################################
     plt.figure('FIR Filter Compensator ideal response')
     plt.subplot(3, 2, 1)
     plt.plot(np.linspace(0, 0.5, NFFT//2), hfir,
@@ -263,7 +261,5 @@ def cic_calc():
     plt.show()
 
 
-# #####################################################################
 # Execute CIC function
-# #####################################################################
 cic_calc()

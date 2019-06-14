@@ -63,6 +63,8 @@ from scipy.fftpack import fft
 N = 512             # Number of samples
 M = (3, 8, 24)      # Moving average step
 
+LM = len(M)         # Size of M
+
 
 # Moving average function
 def maf(sig, m=2):
@@ -89,7 +91,7 @@ def maf_calc():
     """
 
     # Input signal w/ noise:
-    mag = 5     # Magnitude
+    mag = 5         # Magnitude
 
     # This is my signal switcher. Change it for your purposes
     # if 0:
@@ -123,13 +125,17 @@ def maf_calc():
     sig[rnd] = 2*mag                        # Add peaks
 
     # Calculate Moving Average filter:
-    res = np.zeros((lns, len(M)))
-    for i in range(len(M)):
+    res = np.zeros((lns, LM))
+    for i in range(LM):
         res[:, i] = maf(sig, m=M[i])
 
+    # The second way for calculating over 2d array:
+    # for i, j in enumerate(res.T):
+    #     res[:, i] = maf(sig, m=M[i])
+
     # Calculate Frequency responce:
-    hfq = np.zeros((lns, len(M)))
-    for j in range(len(M)):
+    hfq = np.zeros((lns, LM))
+    for j in range(LM):
         for i in range(lns):
             if i == 0:
                 hfq[i, j] = 1
@@ -142,8 +148,8 @@ def maf_calc():
     fft_sig /= np.max(fft_sig)
 
     # Calculate spectrum of output signal:
-    fft_out = np.zeros((lns, len(M)))
-    for i in range(len(M)):
+    fft_out = np.zeros((lns, LM))
+    for i in range(LM):
         fft_out[:, i] = np.abs(fft(res[:, i]))
         fft_out[:, i] /= np.max(fft_out[:, i])
 
@@ -156,7 +162,7 @@ def maf_calc():
     plt.xlim([0, lns-1])
 
     plt.subplot(3, 2, 3)
-    for i in range(len(M)):
+    for i in range(LM):
         plt.plot(hfq[:, i], linewidth=1.25, label="M=%d" % M[i])
     plt.title('MA filter responce')
     plt.grid()
@@ -164,14 +170,14 @@ def maf_calc():
     plt.xlim([0, lns-1])
 
     plt.subplot(3, 2, 5)
-    for i in range(len(M)):
+    for i in range(LM):
         plt.plot(res[:, i], linewidth=1.0, label="M=%d" % M[i])
     plt.title('Output signal')
     plt.grid()
-    plt.legend(loc=1)
+    plt.legend(loc=2)
     plt.xlim([0, N-1])
 
-    for i in range(3):
+    for i in range(LM):
         plt.subplot(3, 2, 2*i+2)
         plt.plot(sig, '-', linewidth=0.5)
         plt.plot(res[:, i], linewidth=1.5)

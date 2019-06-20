@@ -34,6 +34,9 @@ Functions :
     complex_min      - find minimum of complex value
     complex_minmax   - find min and max of complex value
 
+    calc_ulfft       - calculate ultra-long FFT (N > 64K for FPGAs)
+    calc_maf         - calculate moving average filter
+
 ------------------------------------------------------------------------
 
 GNU GENERAL PUBLIC LICENSE
@@ -62,6 +65,7 @@ OR CORRECTION.
 ------------------------------------------------------------------------
 """
 import numpy as np
+from scipy.fftpack import fft
 
 
 def signal_period(period=100):
@@ -348,4 +352,60 @@ def complex_minmax(xx):
     xx : union
         One-dimensional complex input array.
     """
-    return [complex_min(xx), complex_max(xx)]
+    return complex_min(xx), complex_max(xx)
+
+
+def calc_ulfft(sig, n1=32, n2=32):
+    """
+    Calculate Ultra-Long FFT
+
+    Parameters
+    ----------
+    sig : ndarray
+        One-dimensional input array, can be complex
+    n1 : int
+        Rows (number of 1st FFTs)
+    n2 : int
+        Columns (number of 2ns FFTs), so NFFT = N1 * N2
+
+    """
+    # Twiddle factor:
+    t_d = np.reshape(np.array([
+        np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2))
+        for k1 in range(n1) for k2 in range(n2)
+    ]), (n1, n2))
+
+    # 1 Step: Shuffle 0
+    s_d = np.array([sig[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    # 2 Step: Calculate FFT0
+    f_d = np.array([fft(s_d[n2*k1:n2*(k1+1)]) for k1 in range(n1)])
+    # 3 Step: Complex multiplier
+    s_d = np.reshape(np.array(f_d * t_d), n1 * n2)
+    # 4 Step: Shuffle 1
+    s_d = np.array([s_d[k1*n2+k2] for k2 in range(n2) for k1 in range(n1)])
+    # 5 Step: Calculate FFT1
+    f_d = np.array([fft(s_d[n1*k2:n1*(k2+1)]) for k2 in range(n2)])
+    # 6 Step: Shuffle 2
+    s_d = np.reshape(np.array(f_d), n1*n2)
+    # Output result
+    return np.array([s_d[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+
+
+def calc_maf(sig, m=2, mode='one'):
+    """
+    Calculate moving average filter
+
+    Parameters
+    ----------
+    sig : ndarray
+        one-dimensional input array.
+    m : int
+        moving average step
+    mode : str
+        mode for step: one - default, lin - linear decreased steps
+    """
+    coe = np.ones(m) / m
+    if mode == 'lin':
+        coe = np.arange(m, 0, -1) / np.sum(np.arange(1, m+1))
+    # TODO: Add exponential decrease here
+    return np.convolve(sig, coe, mode='same')

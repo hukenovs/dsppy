@@ -15,13 +15,13 @@ Description   :
     Radix-2 FFT with multiplier on twiddle factor before second stage)
 
 Datapath:
-    In -> Shuffle0 -> FFT0 -> Shuffle1 -> Rotate -> FFT1 -> Shuffle2 -> Out
+    In -> Shuffle0 -> FFT0 -> Shuffle1 -> Twd -> FFT1 -> Shuffle2 -> Out
 
     > Shuffle 0, 1, 2 - mix data between rows and colomns.
     > FFT0, FFT1 - partial FFTs (by Rows, by Colomns)
-    > Rotate - complex multiplying data w/ twiddle factor (sine, cosine)
+    > Twd - complex multiplying data w/ twiddle factor (sine, cosine)
 
-    Total dots : NFFT = N1 × N2
+    Total samples : NFFT = N1 × N2
 
     Parameters :
     ----------
@@ -33,7 +33,7 @@ Datapath:
         Total number of FFT points = N1 * N2
 
     ----------
-    Shuffle reordering example
+    Shuffle reordering example:
 
     Parameters: N1 = N2 = 4, NFFT = 16
     Input 1D array:  ( 0 1 2 3 4 5 6 7 8 9 A B C D E F )
@@ -82,96 +82,113 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 
-# #####################################################################
-# Input parameters
-# #####################################################################
 
+# Ultra-long FFT function
+def calc_ulfft(sig, n1=32, n2=32):
+    """
+    Calculate Ultra-Long FFT
+
+    Parameters
+    ----------
+    sig : ndarray
+        One-dimensional input array, can be complex
+    n1 : int
+        Rows (number of 1st FFTs)
+    n2 : int
+        Columns (number of 2ns FFTs), so NFFT = N1 * N2
+
+    """
+    # Twiddle factor:
+    t_d = np.reshape(np.array([
+        np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2))
+        for k1 in range(n1) for k2 in range(n2)
+    ]), (n1, n2))
+
+    # 1 Step: Shuffle 0
+    s_d = np.array([sig[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    # 2 Step: Calculate FFT0
+    f_d = np.array([fft(s_d[n2*k1:n2*(k1+1)]) for k1 in range(n1)])
+    # 3 Step: Complex multiplier
+    s_d = np.reshape(np.array(f_d * t_d), n1 * n2)
+    # 4 Step: Shuffle 1
+    s_d = np.array([s_d[k1*n2+k2] for k2 in range(n2) for k1 in range(n1)])
+    # 5 Step: Calculate FFT1
+    f_d = np.array([fft(s_d[n1*k2:n1*(k2+1)]) for k2 in range(n2)])
+    # 6 Step: Shuffle 2
+    s_d = np.reshape(np.array(f_d), n1*n2)
+    # Output result
+    return np.array([s_d[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+
+
+# Input parameters
 # Number of sample points
 N1 = 32                     # Colomn (FFT1)
 N2 = 32                     # Rows (FFT2)
 NFFT = N1 * N2              # Number of total FFT points
-
 # Signal parameters
 FSIG = 2                    # Signal frequency
 
 
 # Main section: Calculate
-def fft_calc():
+def fft_calc(n1=32, n2=32):
     """
-    Main function: calculate ultra-long FFT
+    Main function: calculate ultra-long FFT step by step
+
+    Parameters
+    ----------
+    n1 : int
+        Rows (number of 1st FFTs)
+    n2 : int
+        Columns (number of 2ns FFTs), so NFFT = N1 * N2
 
     """
-    imit_data = np.zeros(NFFT, dtype=np.complex)
-    for i in range(NFFT):
-        if i in (FSIG, NFFT-FSIG):
-            imit_data[i] = 1 + 1j
-        else:
-            imit_data[i] = 0
+    # Input signal:
+    imit_data = np.array(
+        [1+1j if i in (FSIG, NFFT-FSIG) else 0 for i in range(NFFT)]
+    )
+    # Twiddles for complex multiplier:
+    twd_data = np.reshape(np.array([
+        np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2))
+        for k1 in range(n1) for k2 in range(n2)
+    ]), (n1, n2))
 
     # 1 Step: Shuffle [0] - input sequence
-    sh0_data = np.zeros((N1, N2), dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh0_data[n1, n2] = imit_data[n2*N1 + n1]
+    sh0_data = np.reshape(
+        a=np.array(
+            [imit_data[k2*n1 + k1] for k1 in range(n1) for k2 in range(n2)]
+        ),
+        newshape=(n1, n2)
+    )
 
-    sh0_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh0_long[n1*N2 + n2] = sh0_data[n1, n2]
+    # 2 Step: Calculate FFT0 and shuffle
+    res_fft0 = np.array([fft(sh0_data[k1, ...]) for k1 in range(n1)])
+    # 3 Step: Complex multiplier
+    cmp_data = res_fft0 * twd_data
+    # 4 Step: Calculate FFT1 and shuffle
+    res_fft1 = np.array([fft(cmp_data[..., k2]) for k2 in range(n2)])
 
-    # 2 Step: Calculate FFT0
-    res_fft0 = np.zeros((N1, N2), dtype=np.complex)
-    for n1 in range(N1):
-        res_fft0[n1, ...] = fft(sh0_data[n1, ...])
-
-    sh1_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh1_long[n1*N2 + n2] = res_fft0[n1, n2]
-
-    # 3 Step: Shuffle [1] - FFT0
-    sh2_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh2_long[n2*N1 + n1] = res_fft0[n1, n2]
-
-    # 4 Step: Calculate Twiddles
-    twd_data = np.zeros((N1, N2), dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            twd_data[n1, n2] = np.exp(-1j * 2 * np.pi * n1 * n2 / NFFT)
-
-    twd_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            twd_long[n2*N1 + n1] = twd_data[n1, n2]
-
-    # 5 Step: Complex multiplier
-    cmp_data = np.zeros((N1, N2), dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            cmp_data[n1, n2] = res_fft0[n1, n2] * twd_data[n1, n2]
-
-    cmp_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            cmp_long[n2*N1 + n1] = cmp_data[n1, n2]
-
-    # 6 Step: Calculate FFT1
-    res_fft1 = np.zeros((N1, N2), dtype=np.complex)
-    for n2 in range(N2):
-        res_fft1[..., n2] = fft(cmp_data[..., n2])
-
-    sh3_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh3_long[n2*N1 + n1] = res_fft1[n1, n2]
-
-    # 7 Step: Shuffle [2] - FFT1
-    sh4_long = np.zeros(NFFT, dtype=np.complex)
-    for n1 in range(N1):
-        for n2 in range(N2):
-            sh4_long[n1*N2 + n2] = res_fft1[n1, n2]
+    # Internal Sequences:
+    sh0_long = np.array(
+        [sh0_data[k1, k2] for k1 in range(n1) for k2 in range(n2)]
+    )
+    sh1_long = np.array(
+        [res_fft0[k1, k2] for k1 in range(n1) for k2 in range(n2)]
+    )
+    sh2_long = np.array(
+        [res_fft0[k1, k2] for k2 in range(n2) for k1 in range(n1)]
+    )
+    sh3_long = np.array(
+        [res_fft1[k1, k2] for k2 in range(n2) for k1 in range(n1)]
+    )
+    sh4_long = np.array(
+        [res_fft1[k1, k2] for k1 in range(n1) for k2 in range(n2)]
+    )
+    twd_long = np.array(
+        [twd_data[k1, k2] for k1 in range(n1) for k2 in range(n2)]
+    )
+    cmp_long = np.array(
+        [cmp_data[k1, k2] for k2 in range(n2) for k1 in range(n1)]
+    )
 
     # Plot results
     plt.figure('Ultra-long FFT')
@@ -193,7 +210,7 @@ def fft_calc():
     plt.plot(sh1_long.real)
     plt.plot(sh1_long.imag)
     plt.axis([0, NFFT-1, -2, 2])
-    plt.title('3. FFT0, N1 dots')
+    plt.title('3. FFT0, n1 dots')
     plt.grid()
 
     plt.subplot(4, 2, 4)
@@ -221,7 +238,7 @@ def fft_calc():
     plt.plot(sh3_long.real)
     plt.plot(sh3_long.imag)
     plt.axis([0, NFFT-1, -2, 2])
-    plt.title('7. FFT1, N2 dots')
+    plt.title('7. FFT1, n2 dots')
     plt.grid()
 
     plt.subplot(4, 2, 8)
@@ -236,4 +253,4 @@ def fft_calc():
 
 
 # Execute FFT function
-fft_calc()
+fft_calc(n1=N1, n2=N2)

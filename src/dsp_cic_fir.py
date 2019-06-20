@@ -98,12 +98,13 @@ IS_HDR = True             # Create *.H file (header) if True
 
 NFFT = 2**13              # FFT points for Spectrum
 
-# #####################################################################
+
 # Main section: Calculate
-# #####################################################################
-
-
 def cic_calc():
+    """
+    Main function: calculate fir filter compensator
+
+    """
     # Cutoff frequency after decimation by R:
     fr = Fo / R
 

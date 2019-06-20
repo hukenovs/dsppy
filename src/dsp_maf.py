@@ -60,14 +60,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.fftpack import fft
 
-N = 512             # Number of samples
-M = (3, 8, 24)      # Moving average step
+N = 300             # Number of samples
+M = (3, 8, 20)      # Moving average step
 
 LM = len(M)         # Size of M
 
 
 # Moving average function
-def maf(sig, m=2):
+def maf(sig, m=2, mode='one'):
     """
     Calculate moving average filter
 
@@ -77,9 +77,13 @@ def maf(sig, m=2):
         one-dimensional input array.
     m : int
         moving average step
-
+    mode : str
+        mode for step: one - default, lin - linear decreased steps
     """
     coe = np.ones(m) / m
+    if mode == 'lin':
+        coe = np.arange(m, 0, -1) / np.sum(np.arange(1, m+1))
+    # TODO: Add exponential decrease here
     return np.convolve(sig, coe, mode='same')
 
 
@@ -89,10 +93,6 @@ def maf_calc():
     Main function: calculate moving average filter
 
     """
-
-    # Input signal w/ noise:
-    mag = 5         # Magnitude
-
     # This is my signal switcher. Change it for your purposes
     # if 0:
     #     k = 16  # Number of repeats
@@ -109,6 +109,8 @@ def maf_calc():
     #         )
     #     )
 
+    # Input signal w/ noise:
+    mag = 5     # Magnitude
     sig = np.concatenate(
         (
             np.zeros(int(N/2)),
@@ -119,7 +121,7 @@ def maf_calc():
     lns = sig.size  # Size of signal
 
     # Add some noise and peaks
-    np.random.seed(1)
+    np.random.seed(2)
     sig += np.random.randn(lns)             # Add Gaussian noise
     rnd = np.random.randint(0, lns, 15)     # Add random numbers for index
     sig[rnd] = 2*mag                        # Add peaks

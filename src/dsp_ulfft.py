@@ -142,8 +142,9 @@ def fft_calc(n1=32, n2=32):
         Columns (number of 2ns FFTs), so NFFT = N1 * N2
 
     """
+    sh_dat = np.zeros((8, NFFT), dtype=complex)
     # Input signal:
-    imit_data = np.array(
+    sh_dat[0] = np.array(
         [1+1j if i in (FSIG, NFFT-FSIG) else 0 for i in range(NFFT)]
     )
     # Twiddles for complex multiplier:
@@ -155,11 +156,10 @@ def fft_calc(n1=32, n2=32):
     # 1 Step: Shuffle [0] - input sequence
     sh0_data = np.reshape(
         a=np.array(
-            [imit_data[k2*n1 + k1] for k1 in range(n1) for k2 in range(n2)]
+            [sh_dat[0][k2*n1 + k1] for k1 in range(n1) for k2 in range(n2)]
         ),
         newshape=(n1, n2)
     )
-
     # 2 Step: Calculate FFT0 and shuffle
     res_fft0 = np.array([fft(sh0_data[k1, ...]) for k1 in range(n1)])
     # 3 Step: Complex multiplier
@@ -168,89 +168,53 @@ def fft_calc(n1=32, n2=32):
     res_fft1 = np.array([fft(cmp_data[..., k2]) for k2 in range(n2)])
 
     # Internal Sequences:
-    sh0_long = np.array(
+    sh_dat[1] = np.array(
         [sh0_data[k1, k2] for k1 in range(n1) for k2 in range(n2)]
     )
-    sh1_long = np.array(
+    sh_dat[2] = np.array(
         [res_fft0[k1, k2] for k1 in range(n1) for k2 in range(n2)]
     )
-    sh2_long = np.array(
+    sh_dat[3] = np.array(
         [res_fft0[k1, k2] for k2 in range(n2) for k1 in range(n1)]
     )
-    sh3_long = np.array(
-        [res_fft1[k1, k2] for k2 in range(n2) for k1 in range(n1)]
-    )
-    sh4_long = np.array(
-        [res_fft1[k1, k2] for k1 in range(n1) for k2 in range(n2)]
-    )
-    twd_long = np.array(
+    sh_dat[4] = np.array(
         [twd_data[k1, k2] for k1 in range(n1) for k2 in range(n2)]
     )
-    cmp_long = np.array(
+    sh_dat[5] = np.array(
         [cmp_data[k1, k2] for k2 in range(n2) for k1 in range(n1)]
     )
+    sh_dat[6] = np.array(
+        [res_fft1[k1, k2] for k1 in range(n1) for k2 in range(n2)]
+    )
+    sh_dat[7] = np.array(
+        [res_fft1[k1, k2] for k2 in range(n2) for k1 in range(n1)]
+    )
 
-    # Plot results
+    # Plot titles:
+    plt_titles = (
+        '1. Input Signal',
+        '2. Shuffle [0]',
+        '3. FFT0, n1 dots',
+        '4. Shuffle [1]',
+        '5. Twiddle (Exp)',
+        '6. Complex Multiplier',
+        '7. FFT1, n2 dots',
+        '8. Output signal'
+    )
+
+    # Plot results:
     plt.figure('Ultra-long FFT')
-    plt.subplot(4, 2, 1)
-    plt.plot(imit_data.real)
-    plt.plot(imit_data.imag)
-    plt.axis([0, NFFT-1, 0, 1])
-    plt.title('1. Input Signal')
-    plt.grid()
-
-    plt.subplot(4, 2, 2)
-    plt.plot(sh0_long.real)
-    plt.plot(sh0_long.imag)
-    plt.axis([0, NFFT-1, 0, 1])
-    plt.title('2. Shuffle [0]')
-    plt.grid()
-
-    plt.subplot(4, 2, 3)
-    plt.plot(sh1_long.real)
-    plt.plot(sh1_long.imag)
-    plt.axis([0, NFFT-1, -2, 2])
-    plt.title('3. FFT0, n1 dots')
-    plt.grid()
-
-    plt.subplot(4, 2, 4)
-    plt.plot(sh2_long.real)
-    plt.plot(sh2_long.imag)
-    plt.axis([0, NFFT-1, -2, 2])
-    plt.title('4. Shuffle [1]')
-    plt.grid()
-
-    plt.subplot(4, 2, 5)
-    plt.plot(twd_long.real)
-    plt.plot(twd_long.imag)
-    plt.axis([0, NFFT-1, -1, 1])
-    plt.title('5. Twiddle (Exp)')
-    plt.grid()
-
-    plt.subplot(4, 2, 6)
-    plt.plot(cmp_long.real)
-    plt.plot(cmp_long.imag)
-    plt.axis([0, NFFT-1, -1, 1])
-    plt.title('6. Complex Multiplier')
-    plt.grid()
-
-    plt.subplot(4, 2, 7)
-    plt.plot(sh3_long.real)
-    plt.plot(sh3_long.imag)
-    plt.axis([0, NFFT-1, -2, 2])
-    plt.title('7. FFT1, n2 dots')
-    plt.grid()
-
-    plt.subplot(4, 2, 8)
-    plt.plot(sh4_long.real)
-    plt.plot(sh4_long.imag)
-    plt.axis([0, NFFT-1, -2, 2])
-    plt.title('8. Shuffle [2]')
-    plt.grid()
+    for i in range(8):
+        plt.subplot(4, 2, i+1)
+        plt.plot(sh_dat[i].real, linewidth=1.15)
+        plt.plot(sh_dat[i].imag, linewidth=1.15)
+        plt.title(plt_titles[i])
+        plt.grid()
+        plt.xlim([0, NFFT-1])
 
     plt.tight_layout()
     plt.show()
 
 
-# Execute FFT function
+# Execute main function: Ultra-long FFT
 fft_calc(n1=N1, n2=N2)

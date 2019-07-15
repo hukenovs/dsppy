@@ -1,5 +1,7 @@
 # User added
 .idea/
+*.coe
+*.h
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

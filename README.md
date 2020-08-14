@@ -15,7 +15,7 @@ License: GNU GPL 3.0.
 | **Title**         | Universal python DSP for FPGA/SoC applications |
 | -- | -- |
 | **Author**        | Alexander Kapitanov                            |
-| **Contact**       | sallador@bk.ru                                 |
+| **Contact**       | <hidden>                                       |
 | **Project lang**  | Python                                         |
 | **Libraries**     | Numpy, Scipy, etc.                             |
 | **First Release** | 24 May 2019                                    |

@@ -75,7 +75,7 @@ def signal_period(period=100):
     return np.linspace(0.0, tlast, int(period))
 
 
-def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
+def signal_simple(amp=1.0, freq=10.0, period=100, mode="sin"):
     """
     Create simple waves: sine, cosine or complex combination
 
@@ -92,11 +92,11 @@ def signal_simple(amp=1.0, freq=10.0, period=100, mode='sin'):
     """
 
     tt = freq * 2.0 * np.pi * signal_period(period)
-    if mode == 'sin':
+    if mode == "sin":
         return amp * np.sin(tt)
-    if mode == 'cos':
+    if mode == "cos":
         return amp * np.cos(tt)
-    raise ValueError('Wrond signal mode')
+    raise ValueError("Wrond signal mode")
 
 
 def signal_am(amp=1.0, km=0.25, fc=10.0, fs=2.0, period=100):
@@ -139,7 +139,7 @@ def signal_fm(amp=1.0, kd=0.25, fc=10.0, fs=2.0, period=100):
         Number of points for signal (same as period)
     """
     tt = 2.0 * np.pi * signal_period(period)
-    return amp * np.cos(fc * tt + kd/fs * np.sin(fs * tt))
+    return amp * np.cos(fc * tt + kd / fs * np.sin(fs * tt))
 
 
 def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, **kwargs):
@@ -160,8 +160,8 @@ def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, **kwargs):
         Complex signal if is_complex = True
         Modulated by half-sine wave if is_modsine = True
     """
-    is_complex = kwargs.get('is_complex', False)
-    is_modsine = kwargs.get('is_modsine', False)
+    is_complex = kwargs.get("is_complex", False)
+    is_modsine = kwargs.get("is_modsine", False)
 
     tlin = freq * signal_period(period)
     tdbl = beta * period * signal_period(period) ** 2
@@ -213,7 +213,7 @@ def calc_awgn(sig, snr=0.0):
     np.random.seed(42)
     get_wgn = np.random.randn(1, np.size(sig))[0] / 3
     if chk_cmp is True:
-        return sig + np.sqrt(pwr_2db/2) * (get_wgn + 1j * get_wgn)
+        return sig + np.sqrt(pwr_2db / 2) * (get_wgn + 1j * get_wgn)
     return sig + np.sqrt(pwr_2db) * get_wgn
 
 
@@ -242,7 +242,7 @@ def calc_power(sig):
         Array of floating point data
 
     """
-    return (1/np.size(sig)) * np.sum(np.abs(sig ** 2))
+    return (1 / np.size(sig)) * np.sum(np.abs(sig ** 2))
 
 
 def calc_db(amp=10.0, is_power=False):
@@ -360,28 +360,27 @@ def calc_ulfft(sig, n1=32, n2=32):
 
     """
     # Twiddle factor:
-    t_d = np.reshape(np.array([
-        np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2))
-        for k1 in range(n1) for k2 in range(n2)
-    ]), (n1, n2))
+    t_d = np.reshape(
+        np.array([np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2)) for k1 in range(n1) for k2 in range(n2)]), (n1, n2)
+    )
 
     # 1 Step: Shuffle 0
-    s_d = np.array([sig[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    s_d = np.array([sig[k2 * n1 + k1] for k1 in range(n1) for k2 in range(n2)])
     # 2 Step: Calculate FFT0
-    f_d = np.array([fft(s_d[n2*k1:n2*(k1+1)]) for k1 in range(n1)])
+    f_d = np.array([fft(s_d[n2 * k1 : n2 * (k1 + 1)]) for k1 in range(n1)])
     # 3 Step: Complex multiplier
     s_d = np.reshape(np.array(f_d * t_d), n1 * n2)
     # 4 Step: Shuffle 1
-    s_d = np.array([s_d[k1*n2+k2] for k2 in range(n2) for k1 in range(n1)])
+    s_d = np.array([s_d[k1 * n2 + k2] for k2 in range(n2) for k1 in range(n1)])
     # 5 Step: Calculate FFT1
-    f_d = np.array([fft(s_d[n1*k2:n1*(k2+1)]) for k2 in range(n2)])
+    f_d = np.array([fft(s_d[n1 * k2 : n1 * (k2 + 1)]) for k2 in range(n2)])
     # 6 Step: Shuffle 2
-    s_d = np.reshape(np.array(f_d), n1*n2)
+    s_d = np.reshape(np.array(f_d), n1 * n2)
     # Output result
-    return np.array([s_d[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    return np.array([s_d[k2 * n1 + k1] for k1 in range(n1) for k2 in range(n2)])
 
 
-def calc_maf(sig, m=2, mode='one'):
+def calc_maf(sig, m=2, mode="one"):
     """
     Calculate moving average filter
 
@@ -395,7 +394,7 @@ def calc_maf(sig, m=2, mode='one'):
         mode for step: one - default, lin - linear decreased steps
     """
     coe = np.ones(m) / m
-    if mode == 'lin':
-        coe = np.arange(m, 0, -1) / np.sum(np.arange(1, m+1))
+    if mode == "lin":
+        coe = np.arange(m, 0, -1) / np.sum(np.arange(1, m + 1))
     # TODO: Add exponential decrease here
-    return np.convolve(sig, coe, mode='same')
+    return np.convolve(sig, coe, mode="same")

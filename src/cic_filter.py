@@ -109,8 +109,7 @@ class CicFilter:
         """
 
         # comb stage
-        y = np.diff(self.x, n=n,
-                    prepend=np.zeros(n), append=np.zeros(n))
+        y = np.diff(self.x, n=n, prepend=np.zeros(n), append=np.zeros(n))
 
         # interpolation
         if mode:
@@ -123,9 +122,9 @@ class CicFilter:
             y = np.cumsum(y)
 
         if mode:
-            return y[1:1 - n * r]
+            return y[1 : 1 - n * r]
         else:
-            return y[r - 1:-n * r + r - 1]
+            return y[r - 1 : -n * r + r - 1]
 
 
 # main function
@@ -148,37 +147,33 @@ if __name__ == "__main__":
         # Decimator
         x1 = np.sin(4 * np.pi * t1)
         clf = CicFilter(x1)
-        zdec = [clf.decimator(flt_r[i],
-                              flt_n[i]
-                              ) for i in range(3)]
+        zdec = [clf.decimator(flt_r[i], flt_n[i]) for i in range(3)]
 
         # Interpolator
         x2 = np.sin(4 * np.pi * t2)
         clf = CicFilter(x2)
-        zint = [clf.interpolator(flt_r[i],
-                                 flt_n[i],
-                                 mode=False
-                                 ) for i in range(3)]
+        zint = [clf.interpolator(flt_r[i], flt_n[i], mode=False) for i in range(3)]
 
         # Plot figure
         plt.figure(figsize=(12, 6), dpi=80)
         for i in range(2):
-            plt.subplot(4, 2, 1+i)
-            plt.title('Decimator' if i == 0 else 'Interpolator')
-            plt.plot(x1 if i == 0 else x2, '-', color='C0')
-            plt.xlim([0, n1 if i == 0 else n2-1])
+            plt.subplot(4, 2, 1 + i)
+            plt.title("Decimator" if i == 0 else "Interpolator")
+            plt.plot(x1 if i == 0 else x2, "-", color="C0")
+            plt.xlim([0, n1 if i == 0 else n2 - 1])
             plt.grid(True)
 
             for j in range(3):
-                plt.subplot(4, 2, 3+2*j+i)
-                plt.stem(zdec[j] if i == 0 else zint[j],
-                         use_line_collection=True,
-                         linefmt='C2',
-                         basefmt='C0',
-                         label=f'R = {flt_r[j]}, N = {flt_n[j]}'
-                         )
+                plt.subplot(4, 2, 3 + 2 * j + i)
+                plt.stem(
+                    zdec[j] if i == 0 else zint[j],
+                    use_line_collection=True,
+                    linefmt="C2",
+                    basefmt="C0",
+                    label=f"R = {flt_r[j]}, N = {flt_n[j]}",
+                )
                 plt.grid(True)
-                plt.legend(loc='upper right')
+                plt.legend(loc="upper right")
         plt.tight_layout(True)
         plt.show()
 

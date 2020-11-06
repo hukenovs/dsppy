@@ -56,28 +56,27 @@ OR CORRECTION.
 # E-mail        :
 # Company       :
 
-import numpy as np
 import matplotlib.pyplot as plt
-from scipy.fftpack import fft, ifft, fftshift
+import numpy as np
+from scipy.fftpack import fft, fftshift, ifft
 from scipy.signal import convolve
-
-from src.signalgen import signal_chirp, calc_awgn, complex_minmax
+from src.signalgen import calc_awgn, complex_minmax, signal_chirp
 
 # #####################################################################
 # Input parameters
 # #####################################################################
 
 # Number of sample points
-NFFT = 2**9                 # Number of FFT points (signal duration)
+NFFT = 2 ** 9  # Number of FFT points (signal duration)
 
 # Chirp parameters
-asig = 1.100                # Signal magnitude
-fsig = 32.00                # Signal frequency
-beta = 0.250                # Beta (bandwidth of chirp, max = 0.5)
-bstd = 1.050                # Simulate a little clipping of chirp
+asig = 1.100  # Signal magnitude
+fsig = 32.00  # Signal frequency
+beta = 0.250  # Beta (bandwidth of chirp, max = 0.5)
+bstd = 1.050  # Simulate a little clipping of chirp
 
 # Noise parameters (AWGN)
-SNR = 6                     # SNR (Signal to noise ratio) in dB
+SNR = 6  # SNR (Signal to noise ratio) in dB
 
 # #####################################################################
 # Function declaration
@@ -99,15 +98,15 @@ def filter_conv(xx, yy):
     # Step 1: Conjugate and flip core function
     yy_inv = np.flip(np.conj(yy))
     # Step 2: Calculate partial convolution
-    flt_re2re = convolve(xx.real, yy_inv.real, mode='same')
-    flt_re2im = convolve(xx.real, yy_inv.imag, mode='same')
-    flt_im2re = convolve(xx.imag, yy_inv.real, mode='same')
-    flt_im2im = convolve(xx.imag, yy_inv.imag, mode='same')
+    flt_re2re = convolve(xx.real, yy_inv.real, mode="same")
+    flt_re2im = convolve(xx.real, yy_inv.imag, mode="same")
+    flt_im2re = convolve(xx.imag, yy_inv.real, mode="same")
+    flt_im2im = convolve(xx.imag, yy_inv.imag, mode="same")
     # Step 3: Complex conv partial operations
     flt_real = flt_re2re - flt_im2im
     flt_imag = flt_im2re + flt_re2im
     # Step 4: Flip and shift
-    return fftshift(np.flip(flt_real + 1j*flt_imag))
+    return fftshift(np.flip(flt_real + 1j * flt_imag))
 
 
 # #####################################################################
@@ -115,8 +114,7 @@ def filter_conv(xx, yy):
 # #####################################################################
 
 # Signal + Noise, FFT
-imit_data = signal_chirp(amp=asig, freq=fsig, beta=bstd*beta, period=NFFT,
-                         is_complex=True, is_modsine=True)
+imit_data = signal_chirp(amp=asig, freq=fsig, beta=bstd * beta, period=NFFT, is_complex=True, is_modsine=True)
 
 calc_data = calc_awgn(sig=imit_data, snr=SNR)
 
@@ -125,13 +123,12 @@ fft_real = fft_signal.real / np.max(np.abs(fft_signal.real))
 fft_imag = fft_signal.imag / np.max(np.abs(fft_signal.imag))
 
 fft_abs = np.abs(fft_signal)
-fft_log = 20*np.log10(fft_abs / np.max(np.abs(fft_abs)))
+fft_log = 20 * np.log10(fft_abs / np.max(np.abs(fft_abs)))
 
 # Sup. Function & Compl Mult
-sfun_data = signal_chirp(amp=asig, freq=0, beta=beta, period=NFFT,
-                         is_complex=True, is_modsine=True)
+sfun_data = signal_chirp(amp=asig, freq=0, beta=beta, period=NFFT, is_complex=True, is_modsine=True)
 
-fft_sfunc = np.conj(fft(sfun_data, NFFT))     # FFT and conjugate
+fft_sfunc = np.conj(fft(sfun_data, NFFT))  # FFT and conjugate
 
 comp_mult = fft_signal * fft_sfunc
 comp_real = comp_mult.real
@@ -144,7 +141,7 @@ ifft_signal = np.flip(ifft(comp_mult, NFFT))
 time_signal = filter_conv(xx=calc_data, yy=sfun_data)
 
 # Difference
-diff_signal = (ifft_signal-time_signal) / NFFT
+diff_signal = (ifft_signal - time_signal) / NFFT
 
 # #####################################################################
 # Plot results
@@ -163,58 +160,58 @@ axis_dff = complex_minmax(diff_signal)
 #     'size': 10}
 # plt.rc('font', **plt_fonts)
 
-plt.figure('Filter chirp signal freq method)')
+plt.figure("Filter chirp signal freq method)")
 plt.subplot(3, 2, 1)
 plt.plot(calc_data.real)
 plt.plot(calc_data.imag)
-plt.title('1. Input Chirp Signal')
+plt.title("1. Input Chirp Signal")
 plt.grid()
-plt.axis([0, NFFT-1, axis_inp[0], axis_inp[1]])
-plt.xlabel('time')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, axis_inp[0], axis_inp[1]])
+plt.xlabel("time")
+plt.ylabel("Magnitude")
 
 plt.subplot(3, 2, 3)
 plt.plot(fft_log)
-plt.title('2. Chirp Spectrum')
+plt.title("2. Chirp Spectrum")
 plt.grid()
-plt.axis([0, NFFT-1, -50, 0])
-plt.xlabel('freq')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, -50, 0])
+plt.xlabel("freq")
+plt.ylabel("Magnitude")
 
 plt.subplot(3, 2, 5)
 plt.plot(comp_mult.real)
 plt.plot(comp_mult.imag)
-plt.title('3. Complex multiplier')
+plt.title("3. Complex multiplier")
 plt.grid()
-plt.axis([0, NFFT-1, axis_cmp[0], axis_cmp[1]])
-plt.xlabel('freq')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, axis_cmp[0], axis_cmp[1]])
+plt.xlabel("freq")
+plt.ylabel("Magnitude")
 
 plt.subplot(3, 2, 2)
 plt.plot(ifft_signal.real)
 plt.plot(ifft_signal.imag)
-plt.title('4. Output (freq method)')
+plt.title("4. Output (freq method)")
 plt.grid()
-plt.axis([0, NFFT-1, axis_res[0], axis_res[1]])
-plt.xlabel('time')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, axis_res[0], axis_res[1]])
+plt.xlabel("time")
+plt.ylabel("Magnitude")
 
 plt.subplot(3, 2, 4)
 plt.plot(time_signal.real)
 plt.plot(time_signal.imag)
-plt.title('5. Output (time method)')
+plt.title("5. Output (time method)")
 plt.grid()
-plt.axis([0, NFFT-1, axis_tms[0], axis_tms[1]])
-plt.xlabel('time')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, axis_tms[0], axis_tms[1]])
+plt.xlabel("time")
+plt.ylabel("Magnitude")
 
 plt.subplot(3, 2, 6)
 plt.plot(np.abs(diff_signal.real))
 plt.plot(np.abs(diff_signal.imag))
-plt.title('6. Difference error')
+plt.title("6. Difference error")
 plt.grid()
-plt.axis([0, NFFT-1, 0, axis_dff[1]])
-plt.xlabel('time')
-plt.ylabel('Magnitude')
+plt.axis([0, NFFT - 1, 0, axis_dff[1]])
+plt.xlabel("time")
+plt.ylabel("Magnitude")
 plt.tight_layout()
 plt.show()

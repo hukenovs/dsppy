@@ -72,18 +72,19 @@ OR CORRECTION.
 # E-mail        :
 # Company       :
 
+from datetime import datetime
 from functools import lru_cache
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from scipy.fftpack import fft
 
-N1 = 16  # Colomn (FFT1)
+N1 = 8  # Colomn (FFT1)
 N2 = 16  # Rows (FFT2)
 
 
 # Ultra-long FFT function
-def calc_ulfft(sig: np.ndarray, n1: int  =32, n2: int = 32) -> np.ndarray:
+def calc_ulfft(sig: np.ndarray, n1: int = 32, n2: int = 32) -> np.ndarray:
     """
     Calculate Ultra-Long FFT
 
@@ -98,60 +99,63 @@ def calc_ulfft(sig: np.ndarray, n1: int  =32, n2: int = 32) -> np.ndarray:
 
     """
     # Twiddle factor:
-    t_d = np.reshape(np.array([
-        np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2))
-        for k1 in range(n1) for k2 in range(n2)
-    ]), (n1, n2))
+    t_d = np.reshape(
+        np.array([np.exp(-1j * 2 * np.pi * (k1 * k2) / (n1 * n2)) for k1 in range(n1) for k2 in range(n2)]), (n1, n2)
+    )
 
     # 1 Step: Shuffle 0
-    s_d = np.array([sig[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    s_d = np.array([sig[k2 * n1 + k1] for k1 in range(n1) for k2 in range(n2)])
     # 2 Step: Calculate FFT0
-    f_d = np.array([fft(s_d[n2*k1:n2*(k1+1)]) for k1 in range(n1)])
+    f_d = np.array([fft(s_d[n2 * k1 : n2 * (k1 + 1)]) for k1 in range(n1)])
     # 3 Step: Complex multiplier
     s_d = np.reshape(np.array(f_d * t_d), n1 * n2)
     # 4 Step: Shuffle 1
-    s_d = np.array([s_d[k1*n2+k2] for k2 in range(n2) for k1 in range(n1)])
+    s_d = np.array([s_d[k1 * n2 + k2] for k2 in range(n2) for k1 in range(n1)])
     # 5 Step: Calculate FFT1
-    f_d = np.array([fft(s_d[n1*k2:n1*(k2+1)]) for k2 in range(n2)])
+    f_d = np.array([fft(s_d[n1 * k2 : n1 * (k2 + 1)]) for k2 in range(n2)])
     # 6 Step: Shuffle 2
-    s_d = np.reshape(np.array(f_d), n1*n2)
+    s_d = np.reshape(np.array(f_d), n1 * n2)
     # Output result
-    return np.array([s_d[k2*n1+k1] for k1 in range(n1) for k2 in range(n2)])
+    return np.array([s_d[k2 * n1 + k1] for k1 in range(n1) for k2 in range(n2)])
 
 
 class SignalGenerator:
-    """Generate some useful kind of signals: harmonic or linear freq. modulated.
+    def __init__(
+        self, nfft: int, freq: float, alpha: float = 0.01,
+    ):
+        """Generate some useful kind of signals: harmonic or linear freq. modulated.
 
-    Parameters
-    ----------
-    nfft : int
-        Total lenght of FFT (NFFT = N1 * N2).
-    alpha : float
-        Add Gaussian noise if alpha not equal to zero. Should be positive.
+        Parameters
+        ----------
+        nfft : int
+            Total lenght of FFT (NFFT = N1 * N2).
+        freq : float
+            Signal frequency.
+        alpha : float
+            Add Gaussian noise if alpha not equal to zero. Should be positive.
 
-    """
+        """
 
-    """"""
-    def __init__(self, nfft: int, alpha: float = 0.01):
         self.nfft = nfft
+        self.freq = freq
         self.alpha = alpha
 
     def awgn(self):
         np.random.seed(42)
         return self.alpha * np.random.rand(self.nfft)
 
-    def input_harmonic(self, freq: int = 1):
+    def input_harmonic(self):
         """Generate input singal"""
-        return np.array(
-            [1 + 1j if i in (freq, self.nfft - freq) else 0 for i in range(self.nfft)]
-        ) + self.awgn()
+        return (
+            np.array([1 + 1j if i in (self.freq, self.nfft - self.freq) else 0 for i in range(self.nfft)]) + self.awgn()
+        )
 
     def input_linfreq(self):
 
         tt = np.linspace(0, 1, self.nfft, endpoint=False)
 
-        sig_re = np.cos(self.nfft * tt ** 2 * np.pi) * np.sin(tt * np.pi) + self.awgn()
-        sig_im = np.sin(self.nfft * tt ** 2 * np.pi) * np.sin(tt * np.pi) + self.awgn()
+        sig_re = np.cos(self.freq * tt ** 2 * np.pi) * np.sin(tt * np.pi) + self.awgn()
+        sig_im = np.sin(self.freq * tt ** 2 * np.pi) * np.sin(tt * np.pi) + self.awgn()
         return sig_re + 1j * sig_im
 
 
@@ -169,90 +173,93 @@ class UltraLongFFT:
     """
 
     _plt_titles = (
-        '1. Input Signal',
-        '2. Shuffle [1]',
-        '3. FFT1, N1',
-        '4. Shuffle [2]',
-        '5. Twiddles',
-        '6. Complex Multiplier',
-        '7. FFT2, N2',
-        '8. Shuffle [3]. Output'
+        "1. Input Signal",
+        "2. Shuffle [1]",
+        "3. FFT1, N1",
+        "4. Shuffle [2]",
+        "5. Twiddles",
+        "6. Complex Multiplier",
+        "7. FFT2, N2",
+        "8. Shuffle [3]. Output",
     )
 
     def __init__(self, n1: int = 32, n2: int = 32):
         self.n1 = n1
         self.n2 = n2
+        self.__nfft = n1 * n2
 
     @property
-    @lru_cache(maxsize=8)
-    def nfft(self):
-        """Total lenght of FFT module"""
-        return self.n1 * self.n2
-
-    @property
-    @lru_cache(maxsize=8)
+    @lru_cache(maxsize=4)
     def twiddles(self):
         """Twiddle factors for rotating internal sequence."""
-        twd = np.array([
-            np.exp(-1j * 2 * np.pi * (k1 * k2) / self.nfft)
-            for k1 in range(self.n1) for k2 in range(self.n2)
-        ])
+        twd = np.array(
+            [np.exp(-1j * 2 * np.pi * (k1 * k2) / self.__nfft) for k1 in range(self.n1) for k2 in range(self.n2)]
+        )
         return np.reshape(twd, (self.n1, self.n2))
 
     def fft_calculate(self, signal: np.ndarray) -> np.ndarray:
-        """Calculate signals for each stage of Ultra-long FFT Algorithm"""
-        sh_dat = np.zeros((8, self.nfft), dtype=complex)
+        """Calculate signals for each stage of Ultra-long FFT Algorithm
 
-        # Input signal
-        sh_dat[0] = signal
-        # Twiddles
-        twd_data = self.twiddles
+        Parameters
+        ----------
+        signal : np.ndarray
+            Input signal. Can be complex.
+
+        Returns
+        -------
+        np.ndarray
+            List of arrays for each stage of Ultra-long FFT.
+        """
 
         # ---------------- ULFFT Algorithm ----------------
         # 1 Step: Shuffle input sequence
         sh0_data = np.reshape(
-            a=np.array(
-                [sh_dat[0][k2 * self.n1 + k1] for k1 in range(self.n1) for k2 in range(self.n2)]
-            ),
-            newshape=(self.n1, self.n2)
+            a=np.array([signal[k2 * self.n1 + k1] for k1 in range(self.n1) for k2 in range(self.n2)]),
+            newshape=(self.n1, self.n2),
         )
         # 2 Step: Calculate FFT N1 and shuffle
         res_fft0 = np.array([fft(sh0_data[k1, ...]) for k1 in range(self.n1)])
         # 3 Step: Complex multiplier
-        cmp_data = res_fft0 * twd_data
+        cmp_data = res_fft0 * self.twiddles
         # 4 Step: Calculate FFT N2 and shuffle
-        res_fft1 = np.array([fft(cmp_data[..., k2]) for k2 in range(self.n2)]).reshape(self.n1, self.n2)
+        res_fft1 = np.array([fft(cmp_data[..., k2]) for k2 in range(self.n2)])
 
         # Internal Sequences:
-        sh_dat[1] = np.array([sh0_data[k1, k2] for k1 in range(self.n1) for k2 in range(self.n2)])
-        sh_dat[2] = np.array([res_fft0[k1, k2] for k1 in range(self.n1) for k2 in range(self.n2)])
-        sh_dat[3] = np.array([res_fft0[k1, k2] for k2 in range(self.n2) for k1 in range(self.n1)])
-        sh_dat[4] = np.array([twd_data[k1, k2] for k1 in range(self.n1) for k2 in range(self.n2)])
-        sh_dat[5] = np.array([cmp_data[k1, k2] for k2 in range(self.n2) for k1 in range(self.n1)])
-        sh_dat[6] = np.array([res_fft1[k1, k2] for k1 in range(self.n1) for k2 in range(self.n2)])
-        sh_dat[7] = np.array([res_fft1[k1, k2] for k2 in range(self.n2) for k1 in range(self.n1)])
-        return sh_dat
+        return np.vstack(
+            [
+                signal,
+                sh0_data.reshape(-1, self.__nfft),
+                res_fft0.reshape(-1, self.__nfft),
+                res_fft0.T.reshape(-1, self.__nfft),
+                self.twiddles.reshape(-1, self.__nfft),
+                cmp_data.T.reshape(-1, self.__nfft),
+                res_fft1.reshape(-1, self.__nfft),
+                res_fft1.T.reshape(-1, self.__nfft),
+            ]
+        )
 
-    def plot_result(self, data: np.ndarray):
+    def plot_result(self, data: np.ndarray, save_fig: bool = False):
         """Plot signals for each stage of Ultra-long FFT Algorithm"""
-        plt.figure('Ultra-long FFT', figsize=(16, 12))
-        for i, title in enumerate(self._plt_titles):
+        _ = plt.figure("Ultra-long FFT", figsize=(16, 12))
+        for i, v in enumerate(data):
             plt.subplot(4, 2, i + 1)
-            plt.plot(data[i].real, linewidth=1.15, color="C2")
-            plt.plot(data[i].imag, linewidth=1.15, color="C4")
-            plt.title(title, fontsize=14)
+
+            plt.plot(v.real, linewidth=1.15, color="C2")
+            plt.plot(v.imag, linewidth=1.15, color="C4")
+            plt.title("1", fontsize=14)
             plt.grid(True)
-            plt.xlim([0, self.nfft - 1])
+            plt.xlim([0, self.__nfft - 1])
 
         plt.tight_layout()
+        if save_fig:
+            plt.savefig(f"figure_{datetime.now()}"[:-7])
         plt.show()
 
 
 if __name__ == "__main__":
-    _input = SignalGenerator(N1 * N2, alpha=0.02)
-    _array = _input.input_harmonic(freq=2)
-    # _array = _input.input_linfreq()
+    _input = SignalGenerator(N1 * N2, freq=16, alpha=0.001)
+    # _array = _input.input_harmonic(freq=2)
+    _array = _input.input_linfreq()
     _ulfft = UltraLongFFT(N1, N2)
     _datas = _ulfft.fft_calculate(_array)
-    _ulfft.plot_result(_datas)
-
+    _ulfft.plot_result(_datas, save_fig=True)

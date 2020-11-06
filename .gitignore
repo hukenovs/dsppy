@@ -1,7 +1,5 @@
 # User added
 .idea/
-*.coe
-*.h
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -75,7 +73,8 @@ docs/_build/
 target/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+*.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
 # pyenv
 .python-version
@@ -107,3 +106,5 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+*.png

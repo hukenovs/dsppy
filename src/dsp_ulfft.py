@@ -241,12 +241,12 @@ class UltraLongFFT:
     def plot_result(self, data: np.ndarray, save_fig: bool = False):
         """Plot signals for each stage of Ultra-long FFT Algorithm"""
         _ = plt.figure("Ultra-long FFT", figsize=(16, 12))
-        for i, v in enumerate(data):
+        for i, arr in enumerate(data):
             plt.subplot(4, 2, i + 1)
 
-            plt.plot(v.real, linewidth=1.15, color="C2")
-            plt.plot(v.imag, linewidth=1.15, color="C4")
-            plt.title("1", fontsize=14)
+            plt.plot(arr.real, linewidth=1.15, color="C2")
+            plt.plot(arr.imag, linewidth=1.15, color="C4")
+            plt.title(self._plt_titles[i], fontsize=14)
             plt.grid(True)
             plt.xlim([0, self.__nfft - 1])
 
@@ -258,8 +258,8 @@ class UltraLongFFT:
 
 if __name__ == "__main__":
     _input = SignalGenerator(N1 * N2, freq=16, alpha=0.001)
-    # _array = _input.input_harmonic(freq=2)
+    # _array = _input.input_harmonic()
     _array = _input.input_linfreq()
     _ulfft = UltraLongFFT(N1, N2)
     _datas = _ulfft.fft_calculate(_array)
-    _ulfft.plot_result(_datas, save_fig=True)
+    _ulfft.plot_result(_datas, save_fig=False)

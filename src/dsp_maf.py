@@ -1,15 +1,4 @@
 """
-------------------------------------------------------------------------
-
-Title         : dsp_maf.py
-Author        : Alexander Kapitanov
-E-mail        : sallador@bk.ru
-Lang.         : python
-Company       :
-Release Date  : 2019/06/11
-
-------------------------------------------------------------------------
-
 Description   :
     Moving average filter (MAF) as simple FIR filter.
 
@@ -55,6 +44,12 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
+# Title         : Moving average filter
+# Author        : Alexander Kapitanov
+# E-mail        :
+# Company       :
+
 
 import numpy as np
 import matplotlib.pyplot as plt

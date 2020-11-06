@@ -1,15 +1,4 @@
 """
-------------------------------------------------------------------------
-
-Title         : dsp_cfir_tf.py
-Author        : Alexander Kapitanov
-E-mail        : sallador@bk.ru
-Lang.         : python
-Company       :
-Release Date  : 2019/05/24
-
-------------------------------------------------------------------------
-
 Description   :
     Test Complex filtration of signal by using two algorithms:
     time method and frequency method.
@@ -61,6 +50,11 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
+# Title         : Complex FIR filter
+# Author        : Alexander Kapitanov
+# E-mail        :
+# Company       :
 
 import numpy as np
 import matplotlib.pyplot as plt

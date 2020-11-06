@@ -1,15 +1,6 @@
 """
 ------------------------------------------------------------------------
 
-Title         : cic_filter.py
-Author        : Alexander Kapitanov
-E-mail        : sallador@bk.ru
-Lang.         : python
-Company       :
-Release Date  : 2019/07/15
-
-------------------------------------------------------------------------
-
 Description   :
 
     Cascaded Integrator-Comb (CIC) filter is an optimized class of
@@ -57,6 +48,12 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
+# Title         : Cascaded Integrator-Comb (CIC)
+# Author        : Alexander Kapitanov
+# E-mail        :
+# Company       :
+
 import numpy as np
 
 
@@ -67,14 +64,14 @@ class CicFilter:
 
     Parameters
     ----------
-    x : np.array
+    x : np.ndarray
         input signal
     """
 
-    def __init__(self, x):
+    def __init__(self, x: np.ndarray):
         self.x = x
 
-    def decimator(self, r, n):
+    def decimator(self, r: int, n: int):
         """
         CIC decimator: Integrator + Decimator + Comb
 
@@ -97,7 +94,7 @@ class CicFilter:
         # comb stage
         return np.diff(y, n=n, prepend=np.zeros(n))
 
-    def interpolator(self, r, n, mode=False):
+    def interpolator(self, r: int, n: int, mode: bool = False):
         """
         CIC inteprolator: Comb + Decimator + Integrator
 

@@ -1,15 +1,6 @@
 """
 ------------------------------------------------------------------------
 
-Title         : dsp_cic_fir.py
-Author        : Alexander Kapitanov
-E-mail        : sallador@bk.ru
-Lang.         : python
-Company       :
-Release Date  : 2019/06/08
-
-------------------------------------------------------------------------
-
 Description   :
     Digital Down Converters often use CIC + FIR scheme for downsampling
     and filter input signal.
@@ -69,6 +60,12 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
+# Title         : CIC filter
+# Author        : Alexander Kapitanov
+# E-mail        :
+# Company       :
+
 from sys import version
 import datetime as dt
 

@@ -1,16 +1,4 @@
-"""
-------------------------------------------------------------------------
-
-Title         : signalgen.py
-Author        : Alexander Kapitanov
-E-mail        : sallador@bk.ru
-Lang.         : python
-Company       :
-Release Date  : 2019/05/24
-
-------------------------------------------------------------------------
-
-Description   :
+"""Description   :
     Signal generator for digital signal processing
 
 Functions :
@@ -64,6 +52,12 @@ OR CORRECTION.
 
 ------------------------------------------------------------------------
 """
+
+# Title         : dsp_ulfft.py
+# Author        : Alexander Kapitanov
+# E-mail        :
+# Company       :
+
 import numpy as np
 from scipy.fftpack import fft
 
@@ -184,7 +178,7 @@ def signal_chirp(amp=1.0, freq=0.0, beta=0.25, period=100, **kwargs):
     return res
 
 
-def noise_gauss(mean=0.0, std=0.5, seed=0, period=100):
+def noise_gauss(mean: float = 0.0, std: float = 0.5, period: int = 100):
     """
     Create Gaussian white noise as array of floating-point data
 
@@ -194,16 +188,14 @@ def noise_gauss(mean=0.0, std=0.5, seed=0, period=100):
         Mean value or signal magnitude offset
     std : float
         Standard deviation
-    seed : int
-        Seed used to initialize a pseudorandom number generator
     period : integer
         Number of points for noise (same as signal period)
     """
-    np.random.seed(seed=seed)
+    np.random.seed(42)
     return np.random.normal(mean, std, period)
 
 
-def calc_awgn(sig, snr=0.0, seed=1):
+def calc_awgn(sig, snr=0.0):
     """
     Create Gaussian white noise as array of floating-point data
 
@@ -213,14 +205,12 @@ def calc_awgn(sig, snr=0.0, seed=1):
         Array of floating point data (real or complex signal)
     snr : float
         Standard deviation
-    seed : int
-        Seed used to initialize a pseudorandom number generator
     """
     pwr_sig = calc_power(sig=sig)
     pwr_2db = pwr_sig / calc_idb(db=snr, is_power=False)
     chk_cmp = any(np.iscomplex(sig))
 
-    np.random.seed(seed=seed)
+    np.random.seed(42)
     get_wgn = np.random.randn(1, np.size(sig))[0] / 3
     if chk_cmp is True:
         return sig + np.sqrt(pwr_2db/2) * (get_wgn + 1j * get_wgn)
